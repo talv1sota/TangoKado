@@ -18,4 +18,25 @@ final class Deck {
         self.createdAt = Date()
         self.cards = []
     }
+
+    var masteredCards: [Flashcard] {
+        cards.filter { $0.masteryStatus == .mastered }
+    }
+
+    var strugglingCards: [Flashcard] {
+        cards.filter { $0.masteryStatus == .struggling }
+    }
+
+    var unseenCards: [Flashcard] {
+        cards.filter { $0.masteryStatus == .unseen }
+    }
+
+    var overallAccuracy: Double {
+        let reviewed = cards.filter { $0.totalReviews > 0 }
+        guard !reviewed.isEmpty else { return 0 }
+        let totalCorrect = reviewed.reduce(0) { $0 + $1.correctCount }
+        let totalAttempts = reviewed.reduce(0) { $0 + $1.totalReviews }
+        guard totalAttempts > 0 else { return 0 }
+        return Double(totalCorrect) / Double(totalAttempts)
+    }
 }
