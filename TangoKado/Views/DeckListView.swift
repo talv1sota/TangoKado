@@ -222,7 +222,7 @@ struct DeckDetailView: View {
                 pendingStudyConfig = StudyConfig(cards: cards, reverseMode: reverse, typingMode: typing)
                 showingStudyPicker = false
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.medium, .large])
         }
         .fullScreenCover(item: $activeStudyConfig) { config in
             StudySessionView(deck: deck, specificCards: config.cards, reverseMode: config.reverseMode, typingMode: config.typingMode)
