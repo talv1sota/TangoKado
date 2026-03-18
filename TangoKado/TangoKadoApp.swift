@@ -23,13 +23,27 @@ struct TangoKadoApp: App {
                 fatalError("Failed to create ModelContainer after reset: \(error)")
             }
         }
+
+        // Custom nav bar font — rounded design for a friendlier look
+        let largeTitleFont = UIFont.systemFont(ofSize: 34, weight: .bold)
+        let roundedLargeTitle = UIFont(
+            descriptor: largeTitleFont.fontDescriptor.withDesign(.rounded)!,
+            size: 34
+        )
+        let titleFont = UIFont.systemFont(ofSize: 17, weight: .semibold)
+        let roundedTitle = UIFont(
+            descriptor: titleFont.fontDescriptor.withDesign(.rounded)!,
+            size: 17
+        )
+
+        UINavigationBar.appearance().largeTitleTextAttributes = [.font: roundedLargeTitle]
+        UINavigationBar.appearance().titleTextAttributes = [.font: roundedTitle]
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .task {
-                    // Seed on background-friendly main actor context after UI appears
                     SeedDataManager.seedIfNeeded(modelContext: container.mainContext)
                 }
         }
