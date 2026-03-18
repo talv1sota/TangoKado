@@ -158,6 +158,8 @@ enum CardFilter: String, CaseIterable {
 struct DeckDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("studyReverse") private var reverseMode = false
+    @AppStorage("studyShuffle") private var shuffleMode = true
     var deck: Deck
     @State private var showingAddCard = false
     @State private var showingStudyPicker = false
@@ -214,14 +216,9 @@ struct DeckDetailView: View {
         .sheet(isPresented: $showingAddCard) {
             AddCardView(deck: deck)
         }
-        .sheet(isPresented: $showingStudyPicker, onDismiss: {
-            if let config = pendingStudyConfig {
-                pendingStudyConfig = nil
-                activeStudyConfig = config
-            }
-        }) {
-            StudyModePicker(deck: deck) { cards, reverse, typing, shuffle in
-                pendingStudyConfig = StudyConfig(cards: cards, reverseMode: reverse, typingMode: typing, shuffleMode: shuffle)
+        .sheet(isPresented: $showingStudyPicker) {
+            StudyModePicker(deck: deck) { _, _, _, _ in
+                // Settings saved via @AppStorage automatically
                 showingStudyPicker = false
             }
             .presentationDetents([.medium, .large])
@@ -245,7 +242,7 @@ struct DeckDetailView: View {
         Section {
             // Flashcards
             Button {
-                activeStudyConfig = StudyConfig(cards: nil, reverseMode: false, typingMode: false, shuffleMode: true)
+                activeStudyConfig = StudyConfig(cards: nil, reverseMode: reverseMode, typingMode: false, shuffleMode: shuffleMode)
             } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "rectangle.portrait.on.rectangle.portrait.fill")
@@ -277,7 +274,7 @@ struct DeckDetailView: View {
 
             // Type Answer
             Button {
-                activeStudyConfig = StudyConfig(cards: nil, reverseMode: false, typingMode: true, shuffleMode: true)
+                activeStudyConfig = StudyConfig(cards: nil, reverseMode: reverseMode, typingMode: true, shuffleMode: shuffleMode)
             } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "keyboard.fill")
@@ -543,25 +540,22 @@ struct StudyModePicker: View {
                             .font(.subheadline)
                         Toggle("Reverse (English → Word)", isOn: $reverseMode)
                             .font(.subheadline)
-                        Toggle("Type Answer", isOn: $typingMode)
-                            .font(.subheadline)
                     }
                 }
                 .listStyle(.insetGrouped)
 
-                // Start button pinned at bottom
+                // Save button pinned at bottom
                 Button {
                     onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
                 } label: {
-                    Text("Start (\(selectedCards.count) cards)")
+                    Text("Save & Apply")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(selectedCards.isEmpty ? Color(.systemGray4) : .indigo)
+                        .background(.indigo)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
-                .disabled(selectedCards.isEmpty)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 16)
             }
