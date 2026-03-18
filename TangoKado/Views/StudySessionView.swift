@@ -103,11 +103,38 @@ final class StudySession {
     func submitTypedAnswer() {
         guard !answerSubmitted else { return }
         answerSubmitted = true
-        let correct = displayBack.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let typed = typedAnswer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        // Match any slash-separated alternative (e.g. "of/from" matches "of" or "from")
-        let answers = correct.components(separatedBy: "/").map { $0.trimmingCharacters(in: .whitespaces) }
-        answerCorrect = answers.contains(typed) || typed == correct
+
+        let typed = normalize(typedAnswer)
+        let correctRaw = displayBack
+
+        // Generate all acceptable answers from the correct text
+        var acceptable: Set<String> = []
+
+        // Split by "/" for alternatives like "of/from"
+        let slashParts = correctRaw.components(separatedBy: "/").map { $0.trimmingCharacters(in: .whitespaces) }
+        for part in slashParts {
+            let n = normalize(part)
+            acceptable.insert(n)
+            // Strip "to " prefix for verbs ("to eat" matches "eat")
+            if n.hasPrefix("to ") {
+                acceptable.insert(String(n.dropFirst(3)))
+            }
+            // Strip parenthetical like "(informal)" or "(m.)"
+            let stripped = normalize(part.replacingOccurrences(of: "\\s*\\(.*?\\)", with: "", options: .regularExpression))
+            acceptable.insert(stripped)
+            if stripped.hasPrefix("to ") {
+                acceptable.insert(String(stripped.dropFirst(3)))
+            }
+        }
+
+        // Also try the full string without slashes
+        let fullNorm = normalize(correctRaw)
+        acceptable.insert(fullNorm)
+        if fullNorm.hasPrefix("to ") {
+            acceptable.insert(String(fullNorm.dropFirst(3)))
+        }
+
+        answerCorrect = acceptable.contains(typed)
 
         guard let card = currentCard else { return }
         if answerCorrect {
@@ -123,6 +150,12 @@ final class StudySession {
             incorrectCards.append(card)
             haptic(.error)
         }
+    }
+
+    private func normalize(_ text: String) -> String {
+        text.lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: .diacriticInsensitive, locale: .current) // è → e, ü → u
     }
 
     func revealAnswer() {
@@ -287,47 +320,45 @@ struct StudySessionView: View {
 
     private var typingArea: some View {
         VStack(spacing: 0) {
-            Spacer()
-
-            // Card-style prompt
-            VStack(spacing: 12) {
-                Text(session.reverseMode ? "ENGLISH" : "#\(session.currentCard?.rank ?? 0)")
+            // Card prompt
+            VStack(spacing: 10) {
+                Text(session.reverseMode ? "TRANSLATE TO" : "#\(session.currentCard?.rank ?? 0)")
                     .font(.caption.weight(.semibold))
                     .textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.7))
                     .tracking(1)
 
                 Text(session.displayFront)
-                    .font(.system(size: 30, weight: .bold))
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.4)
                     .padding(.horizontal, 20)
 
-                if let lang = session.reverseMode ? "en-US" : Optional(session.languageCode) {
-                    Button {
-                        SpeechHelper.shared.speak(session.displayFront, languageCode: lang)
-                    } label: {
-                        Image(systemName: "speaker.wave.2.fill")
-                            .font(.title3)
-                            .foregroundStyle(.white.opacity(0.8))
-                            .padding(10)
-                            .background(.white.opacity(0.15), in: Circle())
-                    }
+                Button {
+                    let lang = session.reverseMode ? "en-US" : session.languageCode
+                    SpeechHelper.shared.speak(session.displayFront, languageCode: lang)
+                } label: {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.body)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(8)
+                        .background(.white.opacity(0.15), in: Circle())
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 28)
+            .padding(.vertical, 24)
             .background(
-                RoundedRectangle(cornerRadius: 24)
+                RoundedRectangle(cornerRadius: 20)
                     .fill((session.reverseMode ? Color.blue : Color.indigo).gradient)
-                    .shadow(color: .indigo.opacity(0.3), radius: 12, y: 6)
+                    .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
             )
-            .padding(.horizontal)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
 
-            Spacer().frame(height: 24)
+            Spacer().frame(height: 20)
 
-            // Answer input
+            // Answer area
             if session.answerSubmitted {
                 typingResultFeedback
             } else {
@@ -336,13 +367,23 @@ struct StudySessionView: View {
 
             Spacer()
 
-            // Skip + Reveal buttons
+            // Bottom actions
             if !session.answerSubmitted {
-                HStack(spacing: 24) {
+                HStack(spacing: 28) {
+                    if session.canGoBack {
+                        Button {
+                            session.goBack()
+                            typingFocused = true
+                        } label: {
+                            Label("Back", systemImage: "chevron.left")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Button {
                         session.revealAnswer()
                     } label: {
-                        Text("Reveal")
+                        Label("Reveal", systemImage: "eye")
                             .font(.subheadline)
                             .foregroundStyle(.orange)
                     }
@@ -350,23 +391,22 @@ struct StudySessionView: View {
                         session.typingNextCard()
                         typingFocused = true
                     } label: {
-                        Text("Skip")
+                        Label("Skip", systemImage: "forward.fill")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 20)
             } else {
-                Color.clear.frame(height: 40)
+                Color.clear.frame(height: 48)
             }
         }
         .onAppear { typingFocused = true }
     }
 
     private var typingInputField: some View {
-        VStack(spacing: 16) {
-            TextField("Type your answer...", text: $session.typedAnswer)
-                .textFieldStyle(.roundedBorder)
+        VStack(spacing: 14) {
+            TextField("Your answer...", text: $session.typedAnswer)
                 .font(.title3)
                 .multilineTextAlignment(.center)
                 .autocorrectionDisabled()
@@ -377,6 +417,12 @@ struct StudySessionView: View {
                         session.submitTypedAnswer()
                     }
                 }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6))
+                )
                 .padding(.horizontal, 24)
 
             Button {
@@ -396,25 +442,36 @@ struct StudySessionView: View {
     }
 
     private var typingResultFeedback: some View {
-        VStack(spacing: 12) {
-            if session.answerCorrect {
-                Label("Correct!", systemImage: "checkmark.circle.fill")
-                    .font(.title3.bold())
-                    .foregroundStyle(.green)
-            } else {
-                if !session.typedAnswer.isEmpty {
-                    Text(session.typedAnswer)
-                        .font(.title3)
-                        .strikethrough()
-                        .foregroundStyle(.red)
-                }
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.right")
+        VStack(spacing: 16) {
+            // Result badge
+            VStack(spacing: 8) {
+                Image(systemName: session.answerCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(session.answerCorrect ? .green : .red)
+
+                if session.answerCorrect {
+                    Text("Correct!")
+                        .font(.headline)
                         .foregroundStyle(.green)
+                } else {
+                    if !session.typedAnswer.isEmpty {
+                        Text(session.typedAnswer)
+                            .font(.body)
+                            .strikethrough()
+                            .foregroundStyle(.red.opacity(0.7))
+                    }
                     Text(session.displayBack)
-                        .font(.title2.bold())
+                        .font(.title3.bold())
+                        .foregroundStyle(.primary)
                 }
             }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(session.answerCorrect ? Color.green.opacity(0.08) : Color.red.opacity(0.08))
+            )
+            .padding(.horizontal, 24)
 
             Button {
                 session.typingNextCard()
