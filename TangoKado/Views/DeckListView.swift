@@ -152,7 +152,7 @@ enum CardFilter: String, CaseIterable {
     case all = "All"
     case mastered = "Correct"
     case struggling = "Incorrect"
-    case unseen = "Skipped"
+    case unseen = "New"
 }
 
 struct DeckDetailView: View {
@@ -233,9 +233,17 @@ struct DeckDetailView: View {
 
     // MARK: Study Section
 
+    private var savedFlashcardIndex: Int? {
+        StudySession.savedIndex(for: deck.name, typingMode: false)
+    }
+
+    private var savedTypingIndex: Int? {
+        StudySession.savedIndex(for: deck.name, typingMode: true)
+    }
+
     private var studySection: some View {
         Section {
-            // Flashcards — one tap start
+            // Flashcards
             Button {
                 activeStudyConfig = StudyConfig(cards: nil, reverseMode: false, typingMode: false, shuffleMode: true)
             } label: {
@@ -249,9 +257,15 @@ struct DeckDetailView: View {
                         Text("Flashcards")
                             .font(.headline)
                             .foregroundStyle(.primary)
-                        Text("Tap to flip · swipe to skip")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        if let idx = savedFlashcardIndex {
+                            Text("Continue from card \(idx + 1)")
+                                .font(.caption)
+                                .foregroundStyle(.indigo)
+                        } else {
+                            Text("Tap to flip · swipe to skip")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
                     Image(systemName: "play.fill")
@@ -261,7 +275,7 @@ struct DeckDetailView: View {
             }
             .buttonStyle(.plain)
 
-            // Type Answer — one tap start
+            // Type Answer
             Button {
                 activeStudyConfig = StudyConfig(cards: nil, reverseMode: false, typingMode: true, shuffleMode: true)
             } label: {
@@ -275,9 +289,15 @@ struct DeckDetailView: View {
                         Text("Type Answer")
                             .font(.headline)
                             .foregroundStyle(.primary)
-                        Text("Type the translation")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        if let idx = savedTypingIndex {
+                            Text("Continue from card \(idx + 1)")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                        } else {
+                            Text("Type the translation")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
                     Image(systemName: "play.fill")
@@ -435,7 +455,7 @@ struct ProgressDashboard: View {
         HStack(spacing: 16) {
             progressLabel(count: deck.masteredCards.count, label: "Correct", color: .green)
             progressLabel(count: deck.strugglingCards.count, label: "Incorrect", color: .red)
-            progressLabel(count: deck.unseenCards.count, label: "Skipped", color: .secondary)
+            progressLabel(count: deck.unseenCards.count, label: "New", color: .secondary)
         }
     }
 
@@ -458,16 +478,16 @@ enum CardSet: String, CaseIterable {
     case all = "All"
     case incorrect = "Incorrect"
     case correct = "Correct"
-    case skipped = "Skipped"
+    case skipped = "New"
 }
 
 struct StudyModePicker: View {
     let deck: Deck
     let onSelect: ([Flashcard]?, Bool, Bool, Bool) -> Void
     @State private var wordRangeValue: Double = 0
-    @State private var reverseMode = false
-    @State private var typingMode = false
-    @State private var shuffleMode = true
+    @AppStorage("studyReverse") private var reverseMode = false
+    @AppStorage("studyTyping") private var typingMode = false
+    @AppStorage("studyShuffle") private var shuffleMode = true
     @State private var selectedSet: CardSet = .all
 
     private var maxCards: Int { deck.cards.count }
@@ -492,56 +512,59 @@ struct StudyModePicker: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    VStack(spacing: 4) {
-                        HStack {
-                            Text("Word Range")
-                                .font(.subheadline)
-                            Spacer()
-                            Text(Int(wordRangeValue) == 0 ? "All \(maxCards)" : "Top \(Int(wordRangeValue))")
-                                .font(.subheadline.monospacedDigit())
-                                .foregroundStyle(.indigo)
-                        }
-                        Slider(value: $wordRangeValue, in: 0...Double(maxCards), step: 5)
-                            .tint(.indigo)
-                    }
-                }
-
-                Section("Cards") {
-                    Picker("Study", selection: $selectedSet) {
-                        ForEach(CardSet.allCases, id: \.self) { set in
-                            Text(set.rawValue).tag(set)
+            VStack(spacing: 0) {
+                List {
+                    Section {
+                        VStack(spacing: 4) {
+                            HStack {
+                                Text("Word Range")
+                                    .font(.subheadline)
+                                Spacer()
+                                Text(Int(wordRangeValue) == 0 ? "All \(maxCards)" : "Top \(Int(wordRangeValue))")
+                                    .font(.subheadline.monospacedDigit())
+                                    .foregroundStyle(.indigo)
+                            }
+                            Slider(value: $wordRangeValue, in: 0...Double(maxCards), step: 5)
+                                .tint(.indigo)
                         }
                     }
-                    .pickerStyle(.segmented)
-                }
 
-                Section("Options") {
-                    Toggle("Shuffle", isOn: $shuffleMode)
-                        .font(.subheadline)
-                    Toggle("Reverse (English → Word)", isOn: $reverseMode)
-                        .font(.subheadline)
-                    Toggle("Type Answer", isOn: $typingMode)
-                        .font(.subheadline)
-                }
-
-                Section {
-                    Button {
-                        onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Start (\(selectedCards.count) cards)")
-                                .font(.headline)
-                            Spacer()
+                    Section("Cards") {
+                        Picker("Study", selection: $selectedSet) {
+                            ForEach(CardSet.allCases, id: \.self) { set in
+                                Text(set.rawValue).tag(set)
+                            }
                         }
-                        .padding(.vertical, 6)
+                        .pickerStyle(.segmented)
                     }
-                    .disabled(selectedCards.isEmpty)
+
+                    Section("Options") {
+                        Toggle("Shuffle", isOn: $shuffleMode)
+                            .font(.subheadline)
+                        Toggle("Reverse (English → Word)", isOn: $reverseMode)
+                            .font(.subheadline)
+                        Toggle("Type Answer", isOn: $typingMode)
+                            .font(.subheadline)
+                    }
                 }
+                .listStyle(.insetGrouped)
+
+                // Start button pinned at bottom
+                Button {
+                    onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
+                } label: {
+                    Text("Start (\(selectedCards.count) cards)")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(selectedCards.isEmpty ? Color(.systemGray4) : .indigo)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .disabled(selectedCards.isEmpty)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
             }
-            .listStyle(.insetGrouped)
             .navigationTitle("Study Mode")
             .navigationBarTitleDisplayMode(.inline)
         }

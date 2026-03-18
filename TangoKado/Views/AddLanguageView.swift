@@ -45,7 +45,7 @@ struct AddLanguageView: View {
                             .padding(.vertical, 6)
                             .contentShape(Rectangle())
                         }
-                        .tint(.primary)
+                        .buttonStyle(.plain)
                         .disabled(alreadyAdded)
                     }
                 } header: {
