@@ -1,8 +1,14 @@
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage("hasSeenWelcome") private var hasSeenWelcome = false
+
     var body: some View {
-        DeckListView()
+        if hasSeenWelcome {
+            DeckListView()
+        } else {
+            WelcomeView(hasSeenWelcome: $hasSeenWelcome)
+        }
     }
 }
 
