@@ -55,6 +55,22 @@ final class StudySession {
     var canGoBack: Bool { currentIndex > 0 }
     var canGoForward: Bool { currentIndex + 1 < shuffledCards.count }
 
+    func saveProgress() {
+        let key = "session_\(deck.name)_\(typingMode ? "type" : "flash")"
+        UserDefaults.standard.set(currentIndex, forKey: key)
+    }
+
+    static func savedIndex(for deckName: String, typingMode: Bool) -> Int? {
+        let key = "session_\(deckName)_\(typingMode ? "type" : "flash")"
+        let val = UserDefaults.standard.integer(forKey: key)
+        return val > 0 ? val : nil
+    }
+
+    static func clearSavedSession(for deckName: String, typingMode: Bool) {
+        let key = "session_\(deckName)_\(typingMode ? "type" : "flash")"
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+
     func markCorrect() {
         guard let card = currentCard else { return }
         card.correctCount += 1
@@ -81,6 +97,7 @@ final class StudySession {
             resetCardState()
         } else {
             showingResults = true
+            StudySession.clearSavedSession(for: deck.name, typingMode: typingMode)
         }
     }
 
@@ -419,7 +436,13 @@ struct StudySessionView: View {
     @State private var typedText = ""
 
     init(deck: Deck, specificCards: [Flashcard]? = nil, reverseMode: Bool = false, typingMode: Bool = false, shuffleMode: Bool = true) {
-        _session = State(initialValue: StudySession(deck: deck, specificCards: specificCards, reverseMode: reverseMode, typingMode: typingMode, shuffleMode: shuffleMode))
+        let session = StudySession(deck: deck, specificCards: specificCards, reverseMode: reverseMode, typingMode: typingMode, shuffleMode: shuffleMode)
+        // Resume from saved position if available
+        if let savedIdx = StudySession.savedIndex(for: deck.name, typingMode: typingMode),
+           savedIdx < session.shuffledCards.count {
+            session.currentIndex = savedIdx
+        }
+        _session = State(initialValue: session)
     }
 
     var body: some View {
@@ -461,7 +484,10 @@ struct StudySessionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("Quit") { dismiss() }
+                Button("Quit") {
+                    session.saveProgress()
+                    dismiss()
+                }
             }
         }
     }

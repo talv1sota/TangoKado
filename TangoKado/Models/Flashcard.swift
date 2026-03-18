@@ -11,7 +11,7 @@ enum MasteryStatus: String, CaseIterable {
         switch self {
         case .mastered: return "Correct"
         case .struggling: return "Incorrect"
-        case .unseen: return "Skipped"
+        case .unseen: return "New"
         }
     }
 
