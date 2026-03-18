@@ -79,22 +79,30 @@ struct DeckListView: View {
     }
 
     private var emptyStateView: some View {
-        ContentUnavailableView {
-            Label("Start Learning", systemImage: "character.book.closed.fill")
-        } description: {
-            Text("Add a language to begin studying")
-        } actions: {
-            Button {
-                showingAddLanguage = true
-            } label: {
-                Text("Add Language")
-                    .font(.headline)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(.indigo)
-                    .foregroundStyle(.white)
-                    .clipShape(Capsule())
+        GeometryReader { geo in
+            VStack(spacing: 16) {
+                Image(systemName: "character.book.closed.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(.indigo.opacity(0.5))
+                Text("Start Learning")
+                    .font(.title2.bold())
+                Text("Add a language to begin studying")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Button {
+                    showingAddLanguage = true
+                } label: {
+                    Text("Add Language")
+                        .font(.headline)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(.indigo)
+                        .foregroundStyle(.white)
+                        .clipShape(Capsule())
+                }
+                .padding(.top, 4)
             }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
     }
 
