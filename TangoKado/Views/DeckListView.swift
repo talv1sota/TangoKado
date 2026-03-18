@@ -79,20 +79,15 @@ struct DeckListView: View {
     }
 
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "character.book.closed.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.indigo.opacity(0.5))
-            Text("Start Learning")
-                .font(.title2.bold())
+        ContentUnavailableView {
+            Label("Start Learning", systemImage: "character.book.closed.fill")
+        } description: {
             Text("Add a language to begin studying")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        } actions: {
             Button {
                 showingAddLanguage = true
             } label: {
-                Label("Add Language", systemImage: "plus")
+                Text("Add Language")
                     .font(.headline)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
@@ -100,10 +95,7 @@ struct DeckListView: View {
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
             }
-            .padding(.top, 8)
-            Spacer()
         }
-        .frame(maxHeight: .infinity)
     }
 
 }
@@ -193,20 +185,20 @@ struct DeckDetailView: View {
                 }
             }
         }
-        .confirmationDialog("Reset all progress for \(deck.name)?", isPresented: $showingResetConfirm, titleVisibility: .visible) {
-            Button("Reset Progress", role: .destructive) {
-                resetProgress()
-            }
+        .alert("Reset Progress", isPresented: $showingResetConfirm) {
+            Button("Reset", role: .destructive) { resetProgress() }
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This will clear all correct/incorrect counts and mastery status. The word list stays the same.")
+            Text("Clear all correct/incorrect counts for \(deck.name)?")
         }
-        .confirmationDialog("Remove \(deck.name)?", isPresented: $showingDeleteConfirm, titleVisibility: .visible) {
-            Button("Remove Language", role: .destructive) {
+        .alert("Remove Language", isPresented: $showingDeleteConfirm) {
+            Button("Remove", role: .destructive) {
                 modelContext.delete(deck)
                 dismiss()
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This will delete all cards and progress for \(deck.name).")
+            Text("Delete all cards and progress for \(deck.name)?")
         }
         .sheet(isPresented: $showingAddCard) {
             AddCardView(deck: deck)
@@ -254,6 +246,7 @@ struct DeckDetailView: View {
                 }
                 .padding(.vertical, 4)
             }
+            .buttonStyle(.plain)
         }
     }
 
@@ -494,6 +487,7 @@ struct StudyModePicker: View {
             }
             .padding(.vertical, 2)
         }
+        .buttonStyle(.plain)
     }
 }
 

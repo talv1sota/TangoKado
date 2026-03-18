@@ -48,6 +48,7 @@ struct AddLanguageView: View {
                             }
                             .padding(.vertical, 4)
                         }
+                        .buttonStyle(.plain)
                         .disabled(alreadyAdded)
                     }
                 } header: {
