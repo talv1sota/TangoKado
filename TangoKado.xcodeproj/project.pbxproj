@@ -25,7 +25,7 @@
 		E10000010000000000000016 /* DutchWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000016 /* DutchWords.swift */; };
 		E10000010000000000000017 /* GermanWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000017 /* GermanWords.swift */; };
 		E10000010000000000000018 /* SpeechHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000018 /* SpeechHelper.swift */; };
-		E10000010000000000000019 /* SerbianWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000019 /* SerbianWords.swift */; };
+		E10000010000000000000019 /* CroatianWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000019 /* CroatianWords.swift */; };
 		E10000010000000000000020 /* LanguageRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000020 /* LanguageRegistry.swift */; };
 		E10000010000000000000021 /* AddLanguageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000021 /* AddLanguageView.swift */; };
 /* End PBXBuildFile section */
@@ -49,7 +49,7 @@
 		E10000020000000000000016 /* DutchWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DutchWords.swift; sourceTree = "<group>"; };
 		E10000020000000000000017 /* GermanWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GermanWords.swift; sourceTree = "<group>"; };
 		E10000020000000000000018 /* SpeechHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechHelper.swift; sourceTree = "<group>"; };
-		E10000020000000000000019 /* SerbianWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SerbianWords.swift; sourceTree = "<group>"; };
+		E10000020000000000000019 /* CroatianWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CroatianWords.swift; sourceTree = "<group>"; };
 		E10000020000000000000020 /* LanguageRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageRegistry.swift; sourceTree = "<group>"; };
 		E10000020000000000000021 /* AddLanguageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLanguageView.swift; sourceTree = "<group>"; };
 		E10000030000000000000001 /* TangoKado.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TangoKado.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -120,7 +120,7 @@
 				E10000020000000000000015 /* JapaneseWords.swift */,
 				E10000020000000000000016 /* DutchWords.swift */,
 				E10000020000000000000017 /* GermanWords.swift */,
-				E10000020000000000000019 /* SerbianWords.swift */,
+				E10000020000000000000019 /* CroatianWords.swift */,
 				E10000020000000000000020 /* LanguageRegistry.swift */,
 			);
 			path = Data;
@@ -229,7 +229,7 @@
 				E10000010000000000000016 /* DutchWords.swift in Sources */,
 				E10000010000000000000017 /* GermanWords.swift in Sources */,
 				E10000010000000000000018 /* SpeechHelper.swift in Sources */,
-				E10000010000000000000019 /* SerbianWords.swift in Sources */,
+				E10000010000000000000019 /* CroatianWords.swift in Sources */,
 				E10000010000000000000020 /* LanguageRegistry.swift in Sources */,
 				E10000010000000000000021 /* AddLanguageView.swift in Sources */,
 			);

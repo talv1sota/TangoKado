@@ -13,7 +13,7 @@ enum SeedDataManager {
             ("Japanese", "Top 300 most used Japanese words", "ja-JP", JapaneseWords.words),
             ("Dutch", "Top 300 most used Dutch words", "nl-NL", DutchWords.words),
             ("German", "Top 300 most used German words", "de-DE", GermanWords.words),
-            ("Serbian", "Top 300 most used Serbian words", "hr-HR", SerbianWords.words),
+            ("Croatian", "Top 300 most used Croatian words", "hr-HR", CroatianWords.words),
         ]
 
         for (name, description, langCode, words) in languages {
