@@ -19,6 +19,7 @@ final class Deck {
         self.cards = []
     }
 
+    // Combined mastery
     var masteredCards: [Flashcard] {
         cards.filter { $0.masteryStatus == .mastered }
     }
@@ -31,12 +32,29 @@ final class Deck {
         cards.filter { $0.masteryStatus == .unseen }
     }
 
-    var overallAccuracy: Double {
-        let reviewed = cards.filter { $0.totalReviews > 0 }
-        guard !reviewed.isEmpty else { return 0 }
-        let totalCorrect = reviewed.reduce(0) { $0 + $1.correctCount }
-        let totalAttempts = reviewed.reduce(0) { $0 + $1.totalReviews }
-        guard totalAttempts > 0 else { return 0 }
-        return Double(totalCorrect) / Double(totalAttempts)
+    // Flashcard-specific
+    var flashcardCorrect: Int {
+        cards.reduce(0) { $0 + $1.correctCount }
+    }
+
+    var flashcardIncorrect: Int {
+        cards.reduce(0) { $0 + $1.incorrectCount }
+    }
+
+    var flashcardStudied: Int {
+        cards.filter { $0.totalReviews > 0 }.count
+    }
+
+    // Typing-specific
+    var typingCorrect: Int {
+        cards.reduce(0) { $0 + $1.typingCorrectCount }
+    }
+
+    var typingIncorrect: Int {
+        cards.reduce(0) { $0 + $1.typingIncorrectCount }
+    }
+
+    var typingStudied: Int {
+        cards.filter { $0.typingTotalReviews > 0 }.count
     }
 }
