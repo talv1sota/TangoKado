@@ -125,6 +125,18 @@ final class StudySession {
         }
     }
 
+    func revealAnswer() {
+        guard !answerSubmitted else { return }
+        answerSubmitted = true
+        answerCorrect = false
+        guard let card = currentCard else { return }
+        card.incorrectCount += 1
+        card.lastReviewedAt = Date()
+        incorrectCount += 1
+        incorrectCards.append(card)
+        haptic(.error)
+    }
+
     func typingNextCard() {
         advance()
     }
@@ -324,15 +336,24 @@ struct StudySessionView: View {
 
             Spacer()
 
-            // Skip button
+            // Skip + Reveal buttons
             if !session.answerSubmitted {
-                Button {
-                    session.typingNextCard()
-                    typingFocused = true
-                } label: {
-                    Text("Skip")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                HStack(spacing: 24) {
+                    Button {
+                        session.revealAnswer()
+                    } label: {
+                        Text("Reveal")
+                            .font(.subheadline)
+                            .foregroundStyle(.orange)
+                    }
+                    Button {
+                        session.typingNextCard()
+                        typingFocused = true
+                    } label: {
+                        Text("Skip")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .padding(.bottom, 16)
             } else {
@@ -381,12 +402,18 @@ struct StudySessionView: View {
                     .font(.title3.bold())
                     .foregroundStyle(.green)
             } else {
-                Label("Incorrect", systemImage: "xmark.circle.fill")
-                    .font(.title3.bold())
-                    .foregroundStyle(.red)
-                Text(session.displayBack)
-                    .font(.title2.bold())
-                    .padding(.top, 2)
+                if !session.typedAnswer.isEmpty {
+                    Text(session.typedAnswer)
+                        .font(.title3)
+                        .strikethrough()
+                        .foregroundStyle(.red)
+                }
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.right")
+                        .foregroundStyle(.green)
+                    Text(session.displayBack)
+                        .font(.title2.bold())
+                }
             }
 
             Button {
