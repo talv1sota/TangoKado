@@ -401,33 +401,42 @@ struct ProgressDashboard: View {
 struct StudyModePicker: View {
     let deck: Deck
     let onSelect: ([Flashcard]?, Bool, Bool) -> Void
-    @State private var wordRange: Int = 0
-    @State private var sessionLimit: Int = 0
+    @State private var wordRangeValue: Double = 0
+    @State private var sessionLimitValue: Double = 0
     @State private var reverseMode = false
     @State private var typingMode = false
 
+    private var maxCards: Int { deck.cards.count }
+
+    private var wordRange: Int {
+        let v = Int(wordRangeValue)
+        return v == 0 ? maxCards : v
+    }
+
+    private var sessionLimit: Int {
+        Int(sessionLimitValue)
+    }
+
     private var rangedCards: [Flashcard] {
-        guard wordRange > 0 else { return Array(deck.cards) }
         return Array(deck.cards).filter { $0.rank <= wordRange }
     }
 
     var body: some View {
         NavigationStack {
             List {
-                Section("Word Range") {
-                    Picker("Study words ranked", selection: $wordRange) {
-                        Text("All").tag(0)
-                        Text("Top 15").tag(15)
-                        Text("Top 100").tag(100)
-                        Text("Top 300").tag(300)
-                        if deck.cards.count > 300 {
-                            Text("Top 500").tag(500)
+                Section {
+                    VStack(spacing: 4) {
+                        HStack {
+                            Text("Word Range")
+                                .font(.subheadline)
+                            Spacer()
+                            Text(Int(wordRangeValue) == 0 ? "All \(maxCards)" : "Top \(Int(wordRangeValue))")
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(.indigo)
                         }
-                        if deck.cards.count > 500 {
-                            Text("Top 1000").tag(1000)
-                        }
+                        Slider(value: $wordRangeValue, in: 0...Double(maxCards), step: 5)
+                            .tint(.indigo)
                     }
-                    .pickerStyle(.segmented)
                 }
 
                 Section("Study") {
@@ -455,13 +464,18 @@ struct StudyModePicker: View {
                 }
 
                 Section("Options") {
-                    Picker("Per session", selection: $sessionLimit) {
-                        Text("All").tag(0)
-                        Text("10").tag(10)
-                        Text("25").tag(25)
-                        Text("50").tag(50)
+                    VStack(spacing: 4) {
+                        HStack {
+                            Text("Per Session")
+                                .font(.subheadline)
+                            Spacer()
+                            Text(sessionLimit == 0 ? "All" : "\(sessionLimit)")
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(.indigo)
+                        }
+                        Slider(value: $sessionLimitValue, in: 0...Double(min(rangedCards.count, 100)), step: 5)
+                            .tint(.indigo)
                     }
-                    .pickerStyle(.segmented)
 
                     Toggle("Reverse (English → Word)", isOn: $reverseMode)
                         .font(.subheadline)
@@ -506,11 +520,6 @@ struct CardRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: card.masteryStatus.icon)
-                .font(.caption)
-                .foregroundStyle(card.masteryStatus.color)
-                .frame(width: 18)
-
             if card.rank > 0 {
                 Text("#\(card.rank)")
                     .font(.caption.monospacedDigit())
