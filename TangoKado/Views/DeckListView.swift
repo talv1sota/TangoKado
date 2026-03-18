@@ -28,6 +28,7 @@ struct DeckListView: View {
                                     Image(systemName: "trash")
                                 }
                             }
+                            .listRowSeparator(.hidden)
                         }
                     }
                 }
@@ -57,13 +58,19 @@ struct DeckListView: View {
 
     private var streakBadge: some View {
         let streak = UserDefaults.standard.integer(forKey: "currentStreak")
-        return HStack(spacing: 4) {
+        return HStack(spacing: 5) {
             Image(systemName: "flame.fill")
                 .foregroundStyle(streak > 0 ? .orange : .secondary)
             Text("\(streak)")
                 .font(.subheadline.bold().monospacedDigit())
                 .foregroundStyle(streak > 0 ? .primary : .secondary)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            Capsule()
+                .fill(streak > 0 ? Color.orange.opacity(0.12) : Color(.systemGray5))
+        )
     }
 
     private var emptyStateView: some View {
