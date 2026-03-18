@@ -12,10 +12,8 @@ struct TangoKadoApp: App {
         do {
             container = try ModelContainer(for: schema, configurations: [config])
         } catch {
-            // Schema changed — delete old store and retry
             let url = config.url
             try? FileManager.default.removeItem(at: url)
-            // Also remove write-ahead log and shared memory files
             try? FileManager.default.removeItem(at: url.deletingPathExtension().appendingPathExtension("store-shm"))
             try? FileManager.default.removeItem(at: url.deletingPathExtension().appendingPathExtension("store-wal"))
 
@@ -25,13 +23,15 @@ struct TangoKadoApp: App {
                 fatalError("Failed to create ModelContainer after reset: \(error)")
             }
         }
-
-        SeedDataManager.seedIfNeeded(modelContext: container.mainContext)
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .task {
+                    // Seed on background-friendly main actor context after UI appears
+                    SeedDataManager.seedIfNeeded(modelContext: container.mainContext)
+                }
         }
         .modelContainer(container)
     }
