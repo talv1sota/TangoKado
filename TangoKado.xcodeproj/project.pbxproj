@@ -28,6 +28,7 @@
 		E10000010000000000000019 /* CroatianWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000019 /* CroatianWords.swift */; };
 		E10000010000000000000020 /* LanguageRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000020 /* LanguageRegistry.swift */; };
 		E10000010000000000000021 /* AddLanguageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000021 /* AddLanguageView.swift */; };
+		E10000010000000000000022 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000022 /* WelcomeView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +53,7 @@
 		E10000020000000000000019 /* CroatianWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CroatianWords.swift; sourceTree = "<group>"; };
 		E10000020000000000000020 /* LanguageRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageRegistry.swift; sourceTree = "<group>"; };
 		E10000020000000000000021 /* AddLanguageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLanguageView.swift; sourceTree = "<group>"; };
+		E10000020000000000000022 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		E10000030000000000000001 /* TangoKado.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TangoKado.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -107,6 +109,7 @@
 				E10000020000000000000010 /* AddCardView.swift */,
 				E10000020000000000000011 /* AddDeckView.swift */,
 				E10000020000000000000021 /* AddLanguageView.swift */,
+				E10000020000000000000022 /* WelcomeView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -232,6 +235,7 @@
 				E10000010000000000000019 /* CroatianWords.swift in Sources */,
 				E10000010000000000000020 /* LanguageRegistry.swift in Sources */,
 				E10000010000000000000021 /* AddLanguageView.swift in Sources */,
+				E10000010000000000000022 /* WelcomeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

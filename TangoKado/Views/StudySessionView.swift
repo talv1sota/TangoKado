@@ -1,47 +1,145 @@
 import SwiftUI
+import UIKit
+
+// MARK: - Session State
+
+@Observable
+final class StudySession {
+    let deck: Deck
+    let languageCode: String
+    let reverseMode: Bool
+    var shuffledCards: [Flashcard]
+    var currentIndex = 0
+    var isFlipped = false
+    var cardRotation: Double = 0
+    var correctCount = 0
+    var incorrectCount = 0
+    var showingResults = false
+    var correctCards: [Flashcard] = []
+    var incorrectCards: [Flashcard] = []
+
+    init(deck: Deck, specificCards: [Flashcard]?, reverseMode: Bool = false) {
+        self.deck = deck
+        self.languageCode = deck.languageCode
+        self.reverseMode = reverseMode
+        if let specific = specificCards {
+            self.shuffledCards = specific.shuffled()
+        } else {
+            self.shuffledCards = Array(deck.cards).shuffled()
+        }
+    }
+
+    var currentCard: Flashcard? {
+        guard currentIndex >= 0, currentIndex < shuffledCards.count else { return nil }
+        return shuffledCards[currentIndex]
+    }
+
+    // In reverse mode, front shows English and back shows the foreign word
+    var displayFront: String {
+        guard let card = currentCard else { return "" }
+        return reverseMode ? card.back : card.front
+    }
+
+    var displayBack: String {
+        guard let card = currentCard else { return "" }
+        return reverseMode ? card.front : card.back
+    }
+
+    var canGoBack: Bool { currentIndex > 0 }
+    var canGoForward: Bool { currentIndex + 1 < shuffledCards.count }
+
+    func markCorrect() {
+        guard let card = currentCard else { return }
+        card.correctCount += 1
+        card.lastReviewedAt = Date()
+        correctCount += 1
+        correctCards.append(card)
+        haptic(.success)
+        advance()
+    }
+
+    func markIncorrect() {
+        guard let card = currentCard else { return }
+        card.incorrectCount += 1
+        card.lastReviewedAt = Date()
+        incorrectCount += 1
+        incorrectCards.append(card)
+        haptic(.error)
+        advance()
+    }
+
+    func advance() {
+        if canGoForward {
+            currentIndex += 1
+            resetCardState()
+        } else {
+            showingResults = true
+        }
+    }
+
+    func goForward() {
+        guard canGoForward else { return }
+        currentIndex += 1
+        resetCardState()
+    }
+
+    func goBack() {
+        guard canGoBack else { return }
+        currentIndex -= 1
+        resetCardState()
+    }
+
+    func flipCard() {
+        cardRotation += 180
+        isFlipped.toggle()
+        haptic(.light)
+    }
+
+    private func resetCardState() {
+        isFlipped = false
+        cardRotation = 0
+    }
+
+    private func haptic(_ type: HapticType) {
+        switch type {
+        case .success:
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        case .error:
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        case .light:
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+    }
+
+    enum HapticType { case success, error, light }
+
+    var percentage: Int {
+        guard !shuffledCards.isEmpty else { return 0 }
+        return Int(Double(correctCount) / Double(shuffledCards.count) * 100)
+    }
+}
+
+// MARK: - Study Session View
 
 struct StudySessionView: View {
     @Environment(\.dismiss) private var dismiss
-    let deck: Deck
-
-    @State private var currentIndex = 0
-    @State private var isFlipped = false
-    @State private var cardRotation: Double = 0
-    @State private var correctCount = 0
-    @State private var incorrectCount = 0
-    @State private var showingResults = false
-    @State private var shuffledCards: [Flashcard] = []
-    @State private var dragOffset: CGSize = .zero
-    @State private var history: [(index: Int, wasCorrect: Bool)] = []
-    @State private var correctCards: [Flashcard] = []
-    @State private var incorrectCards: [Flashcard] = []
+    @AppStorage("autoPronouncEnabled") private var autoPronounce = false
+    @State private var session: StudySession
     @State private var showingReStudy = false
-    @State private var sessionId = UUID()
+    @State private var dragOffset: CGFloat = 0
 
-    private let sourceCards: [Flashcard]
-
-    init(deck: Deck, specificCards: [Flashcard]? = nil) {
-        self.deck = deck
-        if let specific = specificCards {
-            self.sourceCards = specific
-        } else {
-            self.sourceCards = Array(deck.cards)
-        }
+    init(deck: Deck, specificCards: [Flashcard]? = nil, reverseMode: Bool = false) {
+        _session = State(initialValue: StudySession(deck: deck, specificCards: specificCards, reverseMode: reverseMode))
     }
 
     var body: some View {
         NavigationStack {
-            if showingResults {
+            if session.showingResults {
                 resultsView
-            } else if shuffledCards.isEmpty {
-                ProgressView()
+            } else if session.shuffledCards.isEmpty {
+                ContentUnavailableView("No Cards", systemImage: "rectangle.slash")
             } else {
                 studyView
-            }
-        }
-        .task(id: sessionId) {
-            if shuffledCards.isEmpty {
-                shuffledCards = sourceCards.shuffled()
             }
         }
     }
@@ -49,196 +147,158 @@ struct StudySessionView: View {
     // MARK: - Study View
 
     private var studyView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             studyHeader
-            Spacer()
-            studyCard
-            Spacer()
-            swipeHints
+                .padding(.bottom, 8)
+
+            cardArea
+                .frame(maxHeight: .infinity)
+
+            Text("Tap to flip")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .padding(.top, 4)
+                .padding(.bottom, 8)
+
             actionButtons
         }
-        .navigationTitle(deck.name)
+        .navigationTitle(session.deck.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button("Quit") { dismiss() }
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    autoPronounce.toggle()
+                } label: {
+                    Image(systemName: autoPronounce ? "speaker.wave.2.fill" : "speaker.slash")
+                        .foregroundStyle(autoPronounce ? .indigo : .secondary)
+                }
+            }
         }
     }
 
     private var studyHeader: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             HStack {
-                Text("\(currentIndex + 1) / \(shuffledCards.count)")
+                Text("\(session.currentIndex + 1) / \(session.shuffledCards.count)")
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
                 Spacer()
                 HStack(spacing: 12) {
-                    Label("\(correctCount)", systemImage: "checkmark.circle.fill")
+                    Label("\(session.correctCount)", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Label("\(incorrectCount)", systemImage: "xmark.circle.fill")
+                    Label("\(session.incorrectCount)", systemImage: "xmark.circle.fill")
                         .foregroundStyle(.red)
                 }
                 .font(.subheadline)
             }
             .padding(.horizontal)
 
-            ProgressView(value: Double(currentIndex), total: Double(shuffledCards.count))
+            ProgressView(value: Double(session.currentIndex), total: Double(session.shuffledCards.count))
                 .tint(.indigo)
                 .padding(.horizontal)
         }
     }
 
-    private var studyCard: some View {
+    private var cardArea: some View {
         ZStack {
             cardBack
             cardFront
         }
-        .id(currentIndex)
-        .offset(x: dragOffset.width)
-        .rotationEffect(.degrees(dragOffset.width / 30))
-        .gesture(swipeGesture)
-        .onTapGesture { flipCard() }
+        .offset(x: dragOffset)
+        .rotationEffect(.degrees(dragOffset / 30))
+        .gesture(dragGesture)
     }
 
     private var cardFront: some View {
-        let card = shuffledCards[currentIndex]
+        let card = session.currentCard
+        let subtitle = session.reverseMode ? "English" : (card?.rank ?? 0 > 0 ? "#\(card?.rank ?? 0)" : "Word")
         return StudyCardFace(
-            text: card.front,
-            subtitle: card.rank > 0 ? "#\(card.rank)" : "Word",
-            color: .indigo,
-            speakLanguage: deck.languageCode
+            text: session.displayFront,
+            subtitle: subtitle,
+            color: session.reverseMode ? .blue : .indigo,
+            speakLanguage: session.reverseMode ? "en-US" : session.languageCode
         )
-        .rotation3DEffect(.degrees(cardRotation), axis: (x: 0, y: 1, z: 0))
-        .opacity(abs(cardRotation.truncatingRemainder(dividingBy: 360)) > 90 ? 0 : 1)
+        .rotation3DEffect(.degrees(session.cardRotation), axis: (x: 0, y: 1, z: 0))
+        .opacity(abs(session.cardRotation.truncatingRemainder(dividingBy: 360)) > 90 ? 0 : 1)
     }
 
     private var cardBack: some View {
         StudyCardFace(
-            text: shuffledCards[currentIndex].back,
-            subtitle: "Answer",
-            color: .blue,
-            speakLanguage: "en-US"
+            text: session.displayBack,
+            subtitle: session.reverseMode ? "#\(session.currentCard?.rank ?? 0)" : "Answer",
+            color: session.reverseMode ? .indigo : .blue,
+            speakLanguage: session.reverseMode ? session.languageCode : "en-US"
         )
-        .rotation3DEffect(.degrees(cardRotation + 180), axis: (x: 0, y: 1, z: 0))
-        .opacity(abs(cardRotation.truncatingRemainder(dividingBy: 360)) > 90 ? 1 : 0)
+        .rotation3DEffect(.degrees(session.cardRotation + 180), axis: (x: 0, y: 1, z: 0))
+        .opacity(abs(session.cardRotation.truncatingRemainder(dividingBy: 360)) > 90 ? 1 : 0)
+        .onChange(of: session.isFlipped) {
+            if session.isFlipped && autoPronounce {
+                let lang = session.reverseMode ? session.languageCode : "en-US"
+                SpeechHelper.shared.speak(session.displayBack, languageCode: lang)
+            }
+        }
     }
 
-    private var swipeGesture: some Gesture {
-        DragGesture()
-            .onChanged { value in dragOffset = value.translation }
+    // MARK: - Gesture
+
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                let dx = value.translation.width
+                if abs(dx) > 10 {
+                    dragOffset = dx
+                }
+            }
             .onEnded { value in
-                if value.translation.width > 100 {
-                    markCorrect()
-                } else if value.translation.width < -100 {
-                    markIncorrect()
-                } else {
-                    withAnimation(.spring()) { dragOffset = .zero }
+                let dx = value.translation.width
+
+                if abs(dx) <= 10 {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        session.flipCard()
+                    }
+                } else if dx > 80 && session.canGoBack {
+                    session.goBack()
+                } else if dx < -80 && session.canGoForward {
+                    session.goForward()
+                }
+
+                withAnimation(.spring()) {
+                    dragOffset = 0
                 }
             }
     }
 
-    private var swipeHints: some View {
-        HStack {
-            Image(systemName: "hand.point.left.fill")
-                .foregroundStyle(.red.opacity(0.5))
-            Text("Don't Know")
-                .foregroundStyle(.red.opacity(0.7))
-            Spacer()
-            Text("Tap to flip")
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text("Got It")
-                .foregroundStyle(.green.opacity(0.7))
-            Image(systemName: "hand.point.right.fill")
-                .foregroundStyle(.green.opacity(0.5))
-        }
-        .font(.caption)
-        .padding(.horizontal, 24)
-    }
+    // MARK: - Buttons
 
     private var actionButtons: some View {
-        HStack(spacing: 30) {
-            Button { goBack() } label: {
-                Image(systemName: "arrow.uturn.backward.circle.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.secondary)
-            }
-            .disabled(history.isEmpty)
-
-            Button { markIncorrect() } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 54))
-                    .foregroundStyle(.red)
+        HStack {
+            Button { session.markIncorrect() } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 52))
+                    Text("Don't Know")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity)
             }
 
-            Button { markCorrect() } label: {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 54))
-                    .foregroundStyle(.green)
+            Button { session.markCorrect() } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 52))
+                    Text("Know It")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.green)
+                .frame(maxWidth: .infinity)
             }
         }
-        .padding(.bottom, 8)
-    }
-
-    // MARK: - Actions
-
-    private func flipCard() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-            cardRotation += 180
-            isFlipped.toggle()
-        }
-    }
-
-    private func markCorrect() {
-        let card = shuffledCards[currentIndex]
-        card.correctCount += 1
-        card.lastReviewedAt = Date()
-        correctCount += 1
-        correctCards.append(card)
-        history.append((index: currentIndex, wasCorrect: true))
-        nextCard()
-    }
-
-    private func markIncorrect() {
-        let card = shuffledCards[currentIndex]
-        card.incorrectCount += 1
-        card.lastReviewedAt = Date()
-        incorrectCount += 1
-        incorrectCards.append(card)
-        history.append((index: currentIndex, wasCorrect: false))
-        nextCard()
-    }
-
-    private func nextCard() {
-        // Reset drag instantly (no animation) to prevent visual glitch
-        dragOffset = .zero
-
-        if currentIndex + 1 < shuffledCards.count {
-            currentIndex += 1
-            isFlipped = false
-            cardRotation = 0
-        } else {
-            showingResults = true
-        }
-    }
-
-    private func goBack() {
-        guard let entry = history.popLast() else { return }
-        let card = shuffledCards[entry.index]
-        if entry.wasCorrect {
-            card.correctCount = max(0, card.correctCount - 1)
-            correctCount = max(0, correctCount - 1)
-            correctCards.removeAll { $0 === card }
-        } else {
-            card.incorrectCount = max(0, card.incorrectCount - 1)
-            incorrectCount = max(0, incorrectCount - 1)
-            incorrectCards.removeAll { $0 === card }
-        }
-        dragOffset = .zero
-        currentIndex = entry.index
-        isFlipped = false
-        cardRotation = 0
+        .padding(.horizontal, 48)
+        .padding(.bottom, 16)
     }
 
     // MARK: - Results View
@@ -249,16 +309,16 @@ struct StudySessionView: View {
                 resultsSummaryHeader
                 resultsStatsCard
 
-                if !incorrectCards.isEmpty {
+                if !session.incorrectCards.isEmpty {
                     reStudyButton
                 }
 
-                if !incorrectCards.isEmpty {
-                    resultsSection(title: "Incorrect", icon: "xmark.circle.fill", color: .red, cards: incorrectCards)
+                if !session.incorrectCards.isEmpty {
+                    resultsSection(title: "Incorrect", icon: "xmark.circle.fill", color: .red, cards: session.incorrectCards)
                 }
 
-                if !correctCards.isEmpty {
-                    resultsSection(title: "Correct", icon: "checkmark.circle.fill", color: .green, cards: correctCards)
+                if !session.correctCards.isEmpty {
+                    resultsSection(title: "Correct", icon: "checkmark.circle.fill", color: .green, cards: session.correctCards)
                 }
 
                 doneButton
@@ -268,15 +328,42 @@ struct StudySessionView: View {
         .navigationTitle("Results")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $showingReStudy) {
-            StudySessionView(deck: deck, specificCards: incorrectCards)
+            StudySessionView(deck: session.deck, specificCards: session.incorrectCards, reverseMode: session.reverseMode)
+        }
+        .onAppear {
+            // Record study date for streak
+            UserDefaults.standard.set(Date(), forKey: "lastStudyDate")
+            updateStreak()
         }
     }
 
+    private func updateStreak() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let lastStreak = UserDefaults.standard.integer(forKey: "currentStreak")
+        let lastDateRaw = UserDefaults.standard.object(forKey: "streakDate") as? Date
+        let lastDate = lastDateRaw.map { calendar.startOfDay(for: $0) }
+
+        if let last = lastDate {
+            let diff = calendar.dateComponents([.day], from: last, to: today).day ?? 0
+            if diff == 0 {
+                // Already studied today
+            } else if diff == 1 {
+                UserDefaults.standard.set(lastStreak + 1, forKey: "currentStreak")
+            } else {
+                UserDefaults.standard.set(1, forKey: "currentStreak")
+            }
+        } else {
+            UserDefaults.standard.set(1, forKey: "currentStreak")
+        }
+        UserDefaults.standard.set(today, forKey: "streakDate")
+    }
+
     private var resultsSummaryHeader: some View {
-        let percentage = shuffledCards.isEmpty ? 0 : Int(Double(correctCount) / Double(shuffledCards.count) * 100)
-        let icon = percentage >= 80 ? "star.fill" : percentage >= 50 ? "hand.thumbsup.fill" : "arrow.clockwise"
-        let iconColor: Color = percentage >= 80 ? .yellow : percentage >= 50 ? .blue : .orange
-        let message = percentage >= 80 ? "Great Job!" : percentage >= 50 ? "Good Effort!" : "Keep Practicing!"
+        let p = session.percentage
+        let icon = p >= 80 ? "star.fill" : p >= 50 ? "hand.thumbsup.fill" : "arrow.clockwise"
+        let iconColor: Color = p >= 80 ? .yellow : p >= 50 ? .blue : .orange
+        let message = p >= 80 ? "Great Job!" : p >= 50 ? "Good Effort!" : "Keep Practicing!"
 
         return VStack(spacing: 12) {
             Image(systemName: icon)
@@ -284,7 +371,7 @@ struct StudySessionView: View {
                 .foregroundStyle(iconColor)
             Text(message)
                 .font(.title.bold())
-            Text(deck.name)
+            Text(session.deck.name)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -292,12 +379,11 @@ struct StudySessionView: View {
     }
 
     private var resultsStatsCard: some View {
-        let percentage = shuffledCards.isEmpty ? 0 : Int(Double(correctCount) / Double(shuffledCards.count) * 100)
-        return VStack(spacing: 12) {
-            ResultRow(label: "Total", value: "\(shuffledCards.count) cards", color: .primary)
-            ResultRow(label: "Correct", value: "\(correctCount)", color: .green)
-            ResultRow(label: "Incorrect", value: "\(incorrectCount)", color: .red)
-            ResultRow(label: "Accuracy", value: "\(percentage)%", color: .indigo)
+        VStack(spacing: 12) {
+            ResultRow(label: "Total", value: "\(session.shuffledCards.count) cards", color: .primary)
+            ResultRow(label: "Correct", value: "\(session.correctCount)", color: .green)
+            ResultRow(label: "Incorrect", value: "\(session.incorrectCount)", color: .red)
+            ResultRow(label: "Accuracy", value: "\(session.percentage)%", color: .indigo)
         }
         .padding()
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -307,7 +393,7 @@ struct StudySessionView: View {
         Button { showingReStudy = true } label: {
             HStack {
                 Image(systemName: "arrow.clockwise")
-                Text("Re-study \(incorrectCards.count) Mistakes")
+                Text("Re-study \(session.incorrectCards.count) Mistakes")
             }
             .font(.headline)
             .frame(maxWidth: .infinity)
@@ -327,7 +413,7 @@ struct StudySessionView: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(cards.enumerated()), id: \.offset) { _, card in
-                    ResultCardRow(card: card, languageCode: deck.languageCode)
+                    ResultCardRow(card: card, languageCode: session.languageCode)
                 }
             }
             .background(.background, in: RoundedRectangle(cornerRadius: 12))

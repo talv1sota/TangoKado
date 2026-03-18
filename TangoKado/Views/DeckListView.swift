@@ -10,28 +10,36 @@ struct DeckListView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            Group {
                 if decks.isEmpty {
                     emptyStateView
                 } else {
-                    LazyVStack(spacing: 12) {
+                    List {
                         ForEach(decks) { deck in
                             NavigationLink(value: deck) {
-                                DeckCard(deck: deck, onDelete: { deleteDeck(deck) })
+                                DeckRow(deck: deck)
                             }
-                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    withAnimation {
+                                        modelContext.delete(deck)
+                                    }
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                            }
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 8)
                 }
             }
-            .background(Color(.systemGroupedBackground))
             .navigationTitle("TangoKado")
             .navigationDestination(for: Deck.self) { deck in
                 DeckDetailView(deck: deck)
             }
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    streakBadge
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showingAddLanguage = true
@@ -44,6 +52,17 @@ struct DeckListView: View {
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageView()
             }
+        }
+    }
+
+    private var streakBadge: some View {
+        let streak = UserDefaults.standard.integer(forKey: "currentStreak")
+        return HStack(spacing: 4) {
+            Image(systemName: "flame.fill")
+                .foregroundStyle(streak > 0 ? .orange : .secondary)
+            Text("\(streak)")
+                .font(.subheadline.bold().monospacedDigit())
+                .foregroundStyle(streak > 0 ? .primary : .secondary)
         }
     }
 
@@ -73,72 +92,37 @@ struct DeckListView: View {
         }
     }
 
-    private func deleteDeck(_ deck: Deck) {
-        modelContext.delete(deck)
-    }
 }
 
-// MARK: - Deck Card (Home Screen)
+// MARK: - Deck Row (Home Screen)
 
-struct DeckCard: View {
+struct DeckRow: View {
     let deck: Deck
-    let onDelete: () -> Void
-    @State private var showingDeleteConfirm = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            deckCardHeader
-            deckCardStats
-        }
-        .padding()
-        .background(.background, in: RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
-        .contextMenu {
-            Button(role: .destructive) { showingDeleteConfirm = true } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-        .confirmationDialog("Delete \(deck.name)?", isPresented: $showingDeleteConfirm) {
-            Button("Delete", role: .destructive) { onDelete() }
-        }
-    }
+        HStack(spacing: 14) {
+            Text(LanguageRegistry.language(for: deck.languageCode)?.flag ?? "")
+                .font(.largeTitle)
 
-    private var deckCardHeader: some View {
-        HStack {
-            let flag = LanguageRegistry.language(for: deck.languageCode)?.flag ?? ""
-            Text(flag).font(.title)
-            Text(deck.name).font(.title3.bold())
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-    }
-
-    private var deckCardStats: some View {
-        HStack(spacing: 8) {
-            Label("\(deck.cards.count)", systemImage: "rectangle.stack.fill")
+            VStack(alignment: .leading, spacing: 4) {
+                Text(deck.name)
+                    .font(.headline)
+                HStack(spacing: 10) {
+                    Label("\(deck.cards.count)", systemImage: "rectangle.stack.fill")
+                    if deck.masteredCards.count > 0 {
+                        Label("\(deck.masteredCards.count)", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    }
+                    if deck.strugglingCards.count > 0 {
+                        Label("\(deck.strugglingCards.count)", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                    }
+                }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-
-            Spacer()
-
-            if deck.masteredCards.count > 0 {
-                Label("\(deck.masteredCards.count)", systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            }
-            if deck.strugglingCards.count > 0 {
-                Label("\(deck.strugglingCards.count)", systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-            if deck.unseenCards.count > 0 {
-                Label("\(deck.unseenCards.count)", systemImage: "circle.dotted")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
+        .padding(.vertical, 4)
     }
 }
 
@@ -152,13 +136,19 @@ enum CardFilter: String, CaseIterable {
 }
 
 struct DeckDetailView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     var deck: Deck
     @State private var showingAddCard = false
     @State private var showingStudySession = false
-    @State private var showingStudyModePicker = false
+    @State private var showingStudyPicker = false
+    @State private var launchStudyOnDismiss = false
     @State private var showingResetConfirm = false
+    @State private var showingDeleteConfirm = false
     @State private var selectedFilter: CardFilter = .all
     @State private var studyCards: [Flashcard]? = nil
+    @State private var reverseMode = false
+    @State private var searchText = ""
 
     var body: some View {
         List {
@@ -169,6 +159,7 @@ struct DeckDetailView: View {
             }
             cardsSection
         }
+        .searchable(text: $searchText, prompt: "Search words")
         .navigationTitle(deck.name)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -178,6 +169,9 @@ struct DeckDetailView: View {
                     }
                     Button(role: .destructive) { showingResetConfirm = true } label: {
                         Label("Reset Progress", systemImage: "arrow.counterclockwise")
+                    }
+                    Button(role: .destructive) { showingDeleteConfirm = true } label: {
+                        Label("Remove Language", systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -191,14 +185,33 @@ struct DeckDetailView: View {
         } message: {
             Text("This will clear all correct/incorrect counts and mastery status. The word list stays the same.")
         }
+        .confirmationDialog("Remove \(deck.name)?", isPresented: $showingDeleteConfirm, titleVisibility: .visible) {
+            Button("Remove Language", role: .destructive) {
+                modelContext.delete(deck)
+                dismiss()
+            }
+        } message: {
+            Text("This will delete all cards and progress for \(deck.name).")
+        }
         .sheet(isPresented: $showingAddCard) {
             AddCardView(deck: deck)
         }
-        .confirmationDialog("Study Mode", isPresented: $showingStudyModePicker) {
-            studyModeButtons
+        .sheet(isPresented: $showingStudyPicker, onDismiss: {
+            if launchStudyOnDismiss {
+                launchStudyOnDismiss = false
+                showingStudySession = true
+            }
+        }) {
+            StudyModePicker(deck: deck) { cards, reverse in
+                studyCards = cards
+                reverseMode = reverse
+                launchStudyOnDismiss = true
+                showingStudyPicker = false
+            }
+            .presentationDetents([.height(280)])
         }
         .fullScreenCover(isPresented: $showingStudySession) {
-            StudySessionView(deck: deck, specificCards: studyCards)
+            StudySessionView(deck: deck, specificCards: studyCards, reverseMode: reverseMode)
         }
     }
 
@@ -206,50 +219,29 @@ struct DeckDetailView: View {
 
     private var studySection: some View {
         Section {
-            Button { showingStudyModePicker = true } label: {
-                HStack {
+            Button { showingStudyPicker = true } label: {
+                HStack(spacing: 14) {
                     Image(systemName: "play.fill")
                         .font(.title2)
                         .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .background(.indigo.gradient, in: RoundedRectangle(cornerRadius: 10))
-                    VStack(alignment: .leading) {
+                        .frame(width: 48, height: 48)
+                        .background(.indigo.gradient, in: RoundedRectangle(cornerRadius: 12))
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Start Studying")
                             .font(.headline)
+                            .foregroundStyle(.primary)
                         Text("\(deck.cards.count) total · \(deck.strugglingCards.count) weak · \(deck.unseenCards.count) new")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
+                        .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    @ViewBuilder
-    private var studyModeButtons: some View {
-        Button("All Cards (\(deck.cards.count))") {
-            studyCards = nil
-            showingStudySession = true
-        }
-        let weakCards = Array(deck.strugglingCards)
-        if !weakCards.isEmpty {
-            Button("Weak Cards (\(weakCards.count))") {
-                studyCards = weakCards
-                showingStudySession = true
+                .padding(.vertical, 4)
             }
         }
-        let newCards = Array(deck.unseenCards)
-        if !newCards.isEmpty {
-            Button("New Cards (\(newCards.count))") {
-                studyCards = newCards
-                showingStudySession = true
-            }
-        }
-        Button("Cancel", role: .cancel) {}
     }
 
     // MARK: Progress Section
@@ -275,13 +267,20 @@ struct DeckDetailView: View {
         }
     }
 
+    @State private var isCardsExpanded = false
+
     private var cardsSection: some View {
-        Section("\(selectedFilter.rawValue) (\(filteredCards.count))") {
-            if filteredCards.isEmpty {
-                emptyFilterView
-            } else {
-                ForEach(filteredCards) { (card: Flashcard) in
-                    CardRowView(card: card, languageCode: deck.languageCode)
+        Section {
+            DisclosureGroup(
+                "\(selectedFilter.rawValue) (\(filteredCards.count))",
+                isExpanded: $isCardsExpanded
+            ) {
+                if filteredCards.isEmpty {
+                    emptyFilterView
+                } else {
+                    ForEach(filteredCards) { (card: Flashcard) in
+                        CardRowView(card: card, languageCode: deck.languageCode)
+                    }
                 }
             }
         }
@@ -296,13 +295,18 @@ struct DeckDetailView: View {
     }
 
     private var filteredCards: [Flashcard] {
-        let sorted = Array(deck.cards).sorted { $0.rank < $1.rank }
+        var cards = Array(deck.cards).sorted { $0.rank < $1.rank }
         switch selectedFilter {
-        case .all: return sorted
-        case .mastered: return sorted.filter { $0.masteryStatus == .mastered }
-        case .struggling: return sorted.filter { $0.masteryStatus == .struggling }
-        case .unseen: return sorted.filter { $0.masteryStatus == .unseen }
+        case .all: break
+        case .mastered: cards = cards.filter { $0.masteryStatus == .mastered }
+        case .struggling: cards = cards.filter { $0.masteryStatus == .struggling }
+        case .unseen: cards = cards.filter { $0.masteryStatus == .unseen }
         }
+        if !searchText.isEmpty {
+            let query = searchText.lowercased()
+            cards = cards.filter { $0.front.lowercased().contains(query) || $0.back.lowercased().contains(query) }
+        }
+        return cards
     }
 
     private var emptyFilterView: some View {
@@ -374,6 +378,86 @@ struct ProgressDashboard: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Study Mode Picker
+
+struct StudyModePicker: View {
+    let deck: Deck
+    let onSelect: ([Flashcard]?, Bool) -> Void
+    @State private var sessionLimit: Int = 0
+    @State private var reverseMode = false
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Cards") {
+                    studyRow(icon: "play.fill", title: "All Cards", count: deck.cards.count, color: .indigo) {
+                        onSelect(limitCards(nil), reverseMode)
+                    }
+                    let weak = Array(deck.strugglingCards)
+                    if !weak.isEmpty {
+                        studyRow(icon: "exclamationmark.triangle.fill", title: "Weak Cards", count: weak.count, color: .red) {
+                            onSelect(limitCards(weak), reverseMode)
+                        }
+                    }
+                    let mastered = Array(deck.masteredCards)
+                    if !mastered.isEmpty {
+                        studyRow(icon: "checkmark.circle.fill", title: "Known Cards", count: mastered.count, color: .green) {
+                            onSelect(limitCards(mastered), reverseMode)
+                        }
+                    }
+                    let new = Array(deck.unseenCards)
+                    if !new.isEmpty {
+                        studyRow(icon: "sparkles", title: "New Cards", count: new.count, color: .orange) {
+                            onSelect(limitCards(new), reverseMode)
+                        }
+                    }
+                }
+
+                Section("Options") {
+                    Picker("Cards per session", selection: $sessionLimit) {
+                        Text("All").tag(0)
+                        Text("10").tag(10)
+                        Text("25").tag(25)
+                        Text("50").tag(50)
+                    }
+                    .pickerStyle(.segmented)
+
+                    Toggle("Reverse Mode (English → Word)", isOn: $reverseMode)
+                        .font(.subheadline)
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Study Mode")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func limitCards(_ cards: [Flashcard]?) -> [Flashcard]? {
+        guard sessionLimit > 0 else { return cards }
+        if let cards = cards {
+            return Array(cards.prefix(sessionLimit))
+        }
+        return Array(Array(deck.cards).prefix(sessionLimit))
+    }
+
+    private func studyRow(icon: String, title: String, count: Int, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                    .frame(width: 24)
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text("\(count)")
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            .padding(.vertical, 2)
+        }
     }
 }
 
