@@ -235,46 +235,83 @@ struct DeckDetailView: View {
 
     private var studySection: some View {
         Section {
-            // Quick Start — one tap, all cards shuffled
+            // Flashcards — one tap start
             Button {
                 activeStudyConfig = StudyConfig(cards: nil, reverseMode: false, typingMode: false, shuffleMode: true)
             } label: {
                 HStack(spacing: 14) {
-                    Image(systemName: "play.fill")
-                        .font(.title2)
+                    Image(systemName: "rectangle.portrait.on.rectangle.portrait.fill")
+                        .font(.title3)
                         .foregroundStyle(.white)
-                        .frame(width: 48, height: 48)
-                        .background(.indigo.gradient, in: RoundedRectangle(cornerRadius: 12))
+                        .frame(width: 44, height: 44)
+                        .background(.indigo.gradient, in: RoundedRectangle(cornerRadius: 10))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Start Studying")
+                        Text("Flashcards")
                             .font(.headline)
                             .foregroundStyle(.primary)
-                        Text("\(deck.cards.count) total · \(deck.masteredCards.count) correct · \(deck.strugglingCards.count) incorrect")
+                        Text("Tap to flip · swipe to skip")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
+                    Image(systemName: "play.fill")
+                        .foregroundStyle(.indigo)
                 }
                 .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
 
-            // Options — opens study picker sheet
+            // Type Answer — one tap start
+            Button {
+                activeStudyConfig = StudyConfig(cards: nil, reverseMode: false, typingMode: true, shuffleMode: true)
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "keyboard.fill")
+                        .font(.title3)
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(.blue.gradient, in: RoundedRectangle(cornerRadius: 10))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Type Answer")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        Text("Type the translation")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "play.fill")
+                        .foregroundStyle(.blue)
+                }
+                .padding(.vertical, 4)
+            }
+            .buttonStyle(.plain)
+
+            // Study Options
             Button { showingStudyPicker = true } label: {
-                HStack {
+                HStack(spacing: 14) {
                     Image(systemName: "slider.horizontal.3")
-                        .foregroundStyle(.indigo)
-                    Text("Study Options")
-                        .font(.subheadline)
-                        .foregroundStyle(.primary)
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Study Options")
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        Text("Word range · reverse · shuffle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-                .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
+        } header: {
+            Text("\(deck.cards.count) words · \(deck.masteredCards.count) correct · \(deck.strugglingCards.count) incorrect")
+                .font(.caption)
         }
     }
 

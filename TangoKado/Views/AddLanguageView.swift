@@ -28,7 +28,6 @@ struct AddLanguageView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(language.name)
                                         .font(.headline)
-                                        .foregroundStyle(.primary)
                                     Text("\(language.words.count) words")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -40,19 +39,15 @@ struct AddLanguageView: View {
                                     Label("Added", systemImage: "checkmark.circle.fill")
                                         .font(.subheadline)
                                         .foregroundStyle(.green)
-                                } else {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.title2)
-                                        .foregroundStyle(.indigo)
                                 }
                             }
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
                         .disabled(alreadyAdded)
                     }
                 } header: {
-                    Text("Available Languages")
+                    Text("Tap to add")
                 }
             }
             .navigationTitle("Add Language")
