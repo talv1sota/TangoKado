@@ -71,9 +71,9 @@ struct DeckListView: View {
 
     private var appearanceButton: some View {
         Button {
-            appColorScheme = (appColorScheme + 1) % 3
+            appColorScheme = appColorScheme == 2 ? 1 : 2
         } label: {
-            Image(systemName: appColorScheme == 1 ? "sun.max.fill" : appColorScheme == 2 ? "moon.fill" : "circle.lefthalf.filled")
+            Image(systemName: appColorScheme == 2 ? "moon.fill" : "sun.max.fill")
                 .font(.body)
         }
     }
