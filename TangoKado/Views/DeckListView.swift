@@ -104,6 +104,7 @@ struct DeckListView: View {
                 .padding(.top, 4)
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            .offset(y: -40)
         }
     }
 
