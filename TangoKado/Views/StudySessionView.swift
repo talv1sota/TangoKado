@@ -16,37 +16,33 @@ struct StudySessionView: View {
     @State private var correctCards: [Flashcard] = []
     @State private var incorrectCards: [Flashcard] = []
     @State private var showingReStudy = false
-    @State private var hasInitialized = false
+    @State private var sessionId = UUID()
 
-    private let specificCards: [Flashcard]?
+    private let sourceCards: [Flashcard]
 
     init(deck: Deck, specificCards: [Flashcard]? = nil) {
         self.deck = deck
-        self.specificCards = specificCards
+        if let specific = specificCards {
+            self.sourceCards = specific
+        } else {
+            self.sourceCards = Array(deck.cards)
+        }
     }
 
     var body: some View {
         NavigationStack {
             if showingResults {
                 resultsView
-            } else if shuffledCards.isEmpty && hasInitialized {
-                ContentUnavailableView("No Cards", systemImage: "rectangle.slash")
             } else if shuffledCards.isEmpty {
                 ProgressView()
-                    .onAppear { initializeCards() }
             } else {
                 studyView
             }
         }
-    }
-
-    private func initializeCards() {
-        guard !hasInitialized else { return }
-        hasInitialized = true
-        if let specific = specificCards {
-            shuffledCards = specific.shuffled()
-        } else {
-            shuffledCards = Array(deck.cards).shuffled()
+        .task(id: sessionId) {
+            if shuffledCards.isEmpty {
+                shuffledCards = sourceCards.shuffled()
+            }
         }
     }
 
@@ -98,6 +94,7 @@ struct StudySessionView: View {
             cardBack
             cardFront
         }
+        .id(currentIndex)
         .offset(x: dragOffset.width)
         .rotationEffect(.degrees(dragOffset.width / 30))
         .gesture(swipeGesture)
@@ -214,13 +211,13 @@ struct StudySessionView: View {
     }
 
     private func nextCard() {
-        withAnimation(.spring()) { dragOffset = .zero }
+        // Reset drag instantly (no animation) to prevent visual glitch
+        dragOffset = .zero
+
         if currentIndex + 1 < shuffledCards.count {
-            withAnimation {
-                currentIndex += 1
-                isFlipped = false
-                cardRotation = 0
-            }
+            currentIndex += 1
+            isFlipped = false
+            cardRotation = 0
         } else {
             showingResults = true
         }
@@ -238,11 +235,10 @@ struct StudySessionView: View {
             incorrectCount = max(0, incorrectCount - 1)
             incorrectCards.removeAll { $0 === card }
         }
-        withAnimation {
-            currentIndex = entry.index
-            isFlipped = false
-            cardRotation = 0
-        }
+        dragOffset = .zero
+        currentIndex = entry.index
+        isFlipped = false
+        cardRotation = 0
     }
 
     // MARK: - Results View
