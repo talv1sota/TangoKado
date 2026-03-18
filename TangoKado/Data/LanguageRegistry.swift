@@ -4,7 +4,7 @@ struct LanguageInfo: Identifiable {
     let id: String // language code
     let name: String
     let flag: String
-    let words: [(String, String)]
+    let words: [(String, String, String)]
 
     var code: String { id }
 }

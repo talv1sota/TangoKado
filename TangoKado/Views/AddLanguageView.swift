@@ -72,8 +72,8 @@ struct AddLanguageView: View {
             description: "Top \(language.words.count) most used \(language.name) words",
             languageCode: language.code
         )
-        for (index, (front, back)) in language.words.enumerated() {
-            let card = Flashcard(front: front, back: back, rank: index + 1)
+        for (index, (front, back, example)) in language.words.enumerated() {
+            let card = Flashcard(front: front, back: back, example: example, rank: index + 1)
             card.deck = deck
             deck.cards.append(card)
         }
