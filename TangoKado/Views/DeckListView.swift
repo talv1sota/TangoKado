@@ -61,13 +61,20 @@ struct DeckListView: View {
 
     private var streakBadge: some View {
         let streak = UserDefaults.standard.integer(forKey: "currentStreak")
-        return HStack(spacing: 4) {
+        return HStack(spacing: 3) {
             Image(systemName: "flame.fill")
+                .font(.caption)
                 .foregroundStyle(streak > 0 ? .orange : .secondary)
             Text("\(streak)")
-                .font(.subheadline.bold().monospacedDigit())
+                .font(.caption.bold().monospacedDigit())
                 .foregroundStyle(streak > 0 ? .primary : .secondary)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(streak > 0 ? Color.orange.opacity(0.12) : Color(.systemGray5))
+        )
     }
 
     private var appearanceButton: some View {
@@ -367,7 +374,7 @@ struct ProgressDashboard: View {
                     RoundedRectangle(cornerRadius: 4).fill(.green).frame(width: max(mW, 2))
                 }
                 if deck.strugglingCards.count > 0 {
-                    RoundedRectangle(cornerRadius: 4).fill(.orange).frame(width: max(sW, 2))
+                    RoundedRectangle(cornerRadius: 4).fill(.red).frame(width: max(sW, 2))
                 }
                 RoundedRectangle(cornerRadius: 4).fill(Color(.systemGray4))
             }
@@ -379,7 +386,7 @@ struct ProgressDashboard: View {
     private var progressLabels: some View {
         HStack(spacing: 16) {
             progressLabel(count: deck.masteredCards.count, label: "Correct", color: .green)
-            progressLabel(count: deck.strugglingCards.count, label: "Incorrect", color: .orange)
+            progressLabel(count: deck.strugglingCards.count, label: "Incorrect", color: .red)
             progressLabel(count: deck.unseenCards.count, label: "Skipped", color: .secondary)
         }
     }
