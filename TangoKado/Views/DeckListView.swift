@@ -451,51 +451,60 @@ struct ProgressDashboard: View {
     let deck: Deck
 
     var body: some View {
-        VStack(spacing: 12) {
-            progressBar
-            progressLabels
+        VStack(spacing: 10) {
+            // Flashcard row
+            HStack(spacing: 6) {
+                Image(systemName: "rectangle.portrait.on.rectangle.portrait")
+                    .font(.caption2)
+                    .foregroundStyle(.indigo)
+                    .frame(width: 14)
+                Text("Flashcards")
+                    .font(.caption.weight(.medium))
+                Spacer()
+                Label("\(deck.flashcardCorrect)", systemImage: "checkmark")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.green)
+                Label("\(deck.flashcardIncorrect)", systemImage: "xmark")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.red)
+            }
+
+            // Typing row
+            HStack(spacing: 6) {
+                Image(systemName: "keyboard")
+                    .font(.caption2)
+                    .foregroundStyle(.blue)
+                    .frame(width: 14)
+                Text("Typing")
+                    .font(.caption.weight(.medium))
+                Spacer()
+                Label("\(deck.typingCorrect)", systemImage: "checkmark")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.green)
+                Label("\(deck.typingIncorrect)", systemImage: "xmark")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.red)
+            }
+
+            // Overall bar
+            GeometryReader { geo in
+                let total = max(deck.cards.count, 1)
+                let mW = CGFloat(deck.masteredCards.count) / CGFloat(total) * geo.size.width
+                let sW = CGFloat(deck.strugglingCards.count) / CGFloat(total) * geo.size.width
+                HStack(spacing: 2) {
+                    if deck.masteredCards.count > 0 {
+                        RoundedRectangle(cornerRadius: 4).fill(.green).frame(width: max(mW, 2))
+                    }
+                    if deck.strugglingCards.count > 0 {
+                        RoundedRectangle(cornerRadius: 4).fill(.red).frame(width: max(sW, 2))
+                    }
+                    RoundedRectangle(cornerRadius: 4).fill(Color(.systemGray4))
+                }
+            }
+            .frame(height: 6)
+            .clipShape(Capsule())
         }
         .padding(.vertical, 4)
-    }
-
-    private var progressBar: some View {
-        GeometryReader { geo in
-            let total = max(deck.cards.count, 1)
-            let mW = CGFloat(deck.masteredCards.count) / CGFloat(total) * geo.size.width
-            let sW = CGFloat(deck.strugglingCards.count) / CGFloat(total) * geo.size.width
-
-            HStack(spacing: 2) {
-                if deck.masteredCards.count > 0 {
-                    RoundedRectangle(cornerRadius: 4).fill(.green).frame(width: max(mW, 2))
-                }
-                if deck.strugglingCards.count > 0 {
-                    RoundedRectangle(cornerRadius: 4).fill(.red).frame(width: max(sW, 2))
-                }
-                RoundedRectangle(cornerRadius: 4).fill(Color(.systemGray4))
-            }
-        }
-        .frame(height: 8)
-        .clipShape(Capsule())
-    }
-
-    private var progressLabels: some View {
-        HStack(spacing: 16) {
-            progressLabel(count: deck.masteredCards.count, label: "Correct", color: .green)
-            progressLabel(count: deck.strugglingCards.count, label: "Incorrect", color: .red)
-            progressLabel(count: deck.unseenCards.count, label: "New", color: .secondary)
-        }
-    }
-
-    private func progressLabel(count: Int, label: String, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text("\(count)")
-                .font(.title3.bold().monospacedDigit())
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 
