@@ -132,6 +132,7 @@ struct StudyConfig: Identifiable {
     let id = UUID()
     let cards: [Flashcard]?
     let reverseMode: Bool
+    let typingMode: Bool
 }
 
 enum CardFilter: String, CaseIterable {
@@ -206,14 +207,14 @@ struct DeckDetailView: View {
                 activeStudyConfig = config
             }
         }) {
-            StudyModePicker(deck: deck) { cards, reverse in
-                pendingStudyConfig = StudyConfig(cards: cards, reverseMode: reverse)
+            StudyModePicker(deck: deck) { cards, reverse, typing in
+                pendingStudyConfig = StudyConfig(cards: cards, reverseMode: reverse, typingMode: typing)
                 showingStudyPicker = false
             }
             .presentationDetents([.medium])
         }
         .fullScreenCover(item: $activeStudyConfig) { config in
-            StudySessionView(deck: deck, specificCards: config.cards, reverseMode: config.reverseMode)
+            StudySessionView(deck: deck, specificCards: config.cards, reverseMode: config.reverseMode, typingMode: config.typingMode)
         }
     }
 
@@ -387,33 +388,34 @@ struct ProgressDashboard: View {
 
 struct StudyModePicker: View {
     let deck: Deck
-    let onSelect: ([Flashcard]?, Bool) -> Void
+    let onSelect: ([Flashcard]?, Bool, Bool) -> Void
     @State private var sessionLimit: Int = 0
     @State private var reverseMode = false
+    @State private var typingMode = false
 
     var body: some View {
         NavigationStack {
             List {
                 Section("Cards") {
                     studyRow(icon: "play.fill", title: "All Cards", count: deck.cards.count, color: .indigo) {
-                        onSelect(limitCards(nil), reverseMode)
+                        onSelect(limitCards(nil), reverseMode, typingMode)
                     }
                     let weak = Array(deck.strugglingCards)
                     if !weak.isEmpty {
                         studyRow(icon: "exclamationmark.triangle.fill", title: "Weak Cards", count: weak.count, color: .red) {
-                            onSelect(limitCards(weak), reverseMode)
+                            onSelect(limitCards(weak), reverseMode, typingMode)
                         }
                     }
                     let mastered = Array(deck.masteredCards)
                     if !mastered.isEmpty {
                         studyRow(icon: "checkmark.circle.fill", title: "Known Cards", count: mastered.count, color: .green) {
-                            onSelect(limitCards(mastered), reverseMode)
+                            onSelect(limitCards(mastered), reverseMode, typingMode)
                         }
                     }
                     let new = Array(deck.unseenCards)
                     if !new.isEmpty {
                         studyRow(icon: "sparkles", title: "New Cards", count: new.count, color: .orange) {
-                            onSelect(limitCards(new), reverseMode)
+                            onSelect(limitCards(new), reverseMode, typingMode)
                         }
                     }
                 }
@@ -427,7 +429,9 @@ struct StudyModePicker: View {
                     }
                     .pickerStyle(.segmented)
 
-                    Toggle("Reverse Mode (English → Word)", isOn: $reverseMode)
+                    Toggle("Reverse (English → Word)", isOn: $reverseMode)
+                        .font(.subheadline)
+                    Toggle("Type Answer", isOn: $typingMode)
                         .font(.subheadline)
                 }
             }
