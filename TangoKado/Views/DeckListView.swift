@@ -35,6 +35,7 @@ struct DeckListView: View {
                 }
             }
             .navigationTitle("TangoKado")
+            .navigationBarTitleDisplayMode(decks.isEmpty ? .inline : .large)
             .navigationDestination(for: Deck.self) { deck in
                 DeckDetailView(deck: deck)
             }
