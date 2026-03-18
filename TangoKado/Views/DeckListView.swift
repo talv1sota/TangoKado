@@ -80,7 +80,7 @@ struct DeckListView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 16) {
-            Spacer().frame(height: 100)
+            Spacer()
             Image(systemName: "character.book.closed.fill")
                 .font(.system(size: 64))
                 .foregroundStyle(.indigo.opacity(0.5))
@@ -101,7 +101,9 @@ struct DeckListView: View {
                     .clipShape(Capsule())
             }
             .padding(.top, 8)
+            Spacer()
         }
+        .frame(maxHeight: .infinity)
     }
 
 }
