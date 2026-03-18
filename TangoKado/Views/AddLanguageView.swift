@@ -28,6 +28,7 @@ struct AddLanguageView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(language.name)
                                         .font(.headline)
+                                        .foregroundStyle(.primary)
                                     Text("\(language.words.count) words")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -44,6 +45,7 @@ struct AddLanguageView: View {
                             .padding(.vertical, 6)
                             .contentShape(Rectangle())
                         }
+                        .tint(.primary)
                         .disabled(alreadyAdded)
                     }
                 } header: {
