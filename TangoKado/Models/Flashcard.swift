@@ -26,7 +26,7 @@ enum MasteryStatus: String, CaseIterable {
     var color: Color {
         switch self {
         case .mastered: return .green
-        case .struggling: return .orange
+        case .struggling: return .red
         case .unseen: return .secondary
         }
     }
