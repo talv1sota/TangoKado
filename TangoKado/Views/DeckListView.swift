@@ -156,6 +156,7 @@ struct DeckDetailView: View {
     @State private var showingAddCard = false
     @State private var showingStudySession = false
     @State private var showingStudyModePicker = false
+    @State private var showingResetConfirm = false
     @State private var selectedFilter: CardFilter = .all
     @State private var studyCards: [Flashcard]? = nil
 
@@ -171,10 +172,24 @@ struct DeckDetailView: View {
         .navigationTitle(deck.name)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showingAddCard = true } label: {
-                    Image(systemName: "plus")
+                Menu {
+                    Button { showingAddCard = true } label: {
+                        Label("Add Card", systemImage: "plus")
+                    }
+                    Button(role: .destructive) { showingResetConfirm = true } label: {
+                        Label("Reset Progress", systemImage: "arrow.counterclockwise")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
+        }
+        .confirmationDialog("Reset all progress for \(deck.name)?", isPresented: $showingResetConfirm, titleVisibility: .visible) {
+            Button("Reset Progress", role: .destructive) {
+                resetProgress()
+            }
+        } message: {
+            Text("This will clear all correct/incorrect counts and mastery status. The word list stays the same.")
         }
         .sheet(isPresented: $showingAddCard) {
             AddCardView(deck: deck)
@@ -269,6 +284,14 @@ struct DeckDetailView: View {
                     CardRowView(card: card, languageCode: deck.languageCode)
                 }
             }
+        }
+    }
+
+    private func resetProgress() {
+        for card in deck.cards {
+            card.correctCount = 0
+            card.incorrectCount = 0
+            card.lastReviewedAt = nil
         }
     }
 
