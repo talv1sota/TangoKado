@@ -40,8 +40,14 @@ final class Flashcard {
     var rank: Int
     var createdAt: Date
     var lastReviewedAt: Date?
+
+    // Flashcard mode stats
     var correctCount: Int
     var incorrectCount: Int
+
+    // Typing mode stats
+    var typingCorrectCount: Int
+    var typingIncorrectCount: Int
 
     @Relationship(inverse: \Deck.cards)
     var deck: Deck?
@@ -54,10 +60,16 @@ final class Flashcard {
         self.createdAt = Date()
         self.correctCount = 0
         self.incorrectCount = 0
+        self.typingCorrectCount = 0
+        self.typingIncorrectCount = 0
     }
 
     var totalReviews: Int {
         correctCount + incorrectCount
+    }
+
+    var typingTotalReviews: Int {
+        typingCorrectCount + typingIncorrectCount
     }
 
     var accuracy: Double {
@@ -65,9 +77,18 @@ final class Flashcard {
         return Double(correctCount) / Double(totalReviews)
     }
 
+    var typingAccuracy: Double {
+        guard typingTotalReviews > 0 else { return 0 }
+        return Double(typingCorrectCount) / Double(typingTotalReviews)
+    }
+
+    // Combined mastery considers both modes
     var masteryStatus: MasteryStatus {
-        guard totalReviews > 0 else { return .unseen }
-        if accuracy >= 0.8 { return .mastered }
+        let total = totalReviews + typingTotalReviews
+        guard total > 0 else { return .unseen }
+        let totalCorrect = correctCount + typingCorrectCount
+        let combinedAccuracy = Double(totalCorrect) / Double(total)
+        if combinedAccuracy >= 0.8 { return .mastered }
         return .struggling
     }
 }

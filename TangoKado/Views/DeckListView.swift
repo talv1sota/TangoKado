@@ -187,7 +187,17 @@ struct DeckDetailView: View {
                     Button { showingAddCard = true } label: {
                         Label("Add Card", systemImage: "plus")
                     }
-                    Button(role: .destructive) { showingResetConfirm = true } label: {
+                    Menu {
+                        Button(role: .destructive) { resetFlashcardProgress() } label: {
+                            Label("Reset Flashcards", systemImage: "rectangle.portrait.on.rectangle.portrait")
+                        }
+                        Button(role: .destructive) { resetTypingProgress() } label: {
+                            Label("Reset Typing", systemImage: "keyboard")
+                        }
+                        Button(role: .destructive) { showingResetConfirm = true } label: {
+                            Label("Reset All", systemImage: "arrow.counterclockwise")
+                        }
+                    } label: {
                         Label("Reset Progress", systemImage: "arrow.counterclockwise")
                     }
                     Button(role: .destructive) { showingDeleteConfirm = true } label: {
@@ -198,11 +208,11 @@ struct DeckDetailView: View {
                 }
             }
         }
-        .alert("Reset Progress", isPresented: $showingResetConfirm) {
-            Button("Reset", role: .destructive) { resetProgress() }
+        .alert("Reset All Progress", isPresented: $showingResetConfirm) {
+            Button("Reset All", role: .destructive) { resetAllProgress() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Clear all correct/incorrect counts for \(deck.name)?")
+            Text("Clear all flashcard and typing progress for \(deck.name)?")
         }
         .alert("Remove Language", isPresented: $showingDeleteConfirm) {
             Button("Remove", role: .destructive) {
@@ -374,12 +384,32 @@ struct DeckDetailView: View {
         }
     }
 
-    private func resetProgress() {
+    private func resetFlashcardProgress() {
         for card in deck.cards {
             card.correctCount = 0
             card.incorrectCount = 0
+        }
+        StudySession.clearSavedSession(for: deck.name, typingMode: false)
+    }
+
+    private func resetTypingProgress() {
+        for card in deck.cards {
+            card.typingCorrectCount = 0
+            card.typingIncorrectCount = 0
+        }
+        StudySession.clearSavedSession(for: deck.name, typingMode: true)
+    }
+
+    private func resetAllProgress() {
+        for card in deck.cards {
+            card.correctCount = 0
+            card.incorrectCount = 0
+            card.typingCorrectCount = 0
+            card.typingIncorrectCount = 0
             card.lastReviewedAt = nil
         }
+        StudySession.clearSavedSession(for: deck.name, typingMode: false)
+        StudySession.clearSavedSession(for: deck.name, typingMode: true)
     }
 
     private var filteredCards: [Flashcard] {
@@ -536,7 +566,10 @@ struct StudyModePicker: View {
                     }
 
                     Section("Options") {
-                        Toggle("Shuffle", isOn: $shuffleMode)
+                        Toggle("Learn in Order (#1 first)", isOn: Binding(
+                            get: { !shuffleMode },
+                            set: { shuffleMode = !$0 }
+                        ))
                             .font(.subheadline)
                         Toggle("Reverse (English → Word)", isOn: $reverseMode)
                             .font(.subheadline)
@@ -590,11 +623,25 @@ struct CardRowView: View {
 
             Spacer()
 
-            if card.totalReviews > 0 {
-                Text("\(Int(card.accuracy * 100))%")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(card.masteryStatus.color)
-                    .frame(width: 36, alignment: .trailing)
+            VStack(alignment: .trailing, spacing: 1) {
+                if card.totalReviews > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "rectangle.portrait.on.rectangle.portrait")
+                            .font(.system(size: 8))
+                        Text("\(Int(card.accuracy * 100))%")
+                    }
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(card.accuracy >= 0.8 ? .green : .red)
+                }
+                if card.typingTotalReviews > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 8))
+                        Text("\(Int(card.typingAccuracy * 100))%")
+                    }
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(card.typingAccuracy >= 0.8 ? .green : .red)
+                }
             }
 
             Button {
