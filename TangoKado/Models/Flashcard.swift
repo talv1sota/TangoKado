@@ -1,5 +1,36 @@
 import Foundation
+import SwiftUI
 import SwiftData
+
+enum MasteryStatus: String, CaseIterable {
+    case mastered
+    case struggling
+    case unseen
+
+    var label: String {
+        switch self {
+        case .mastered: return "Mastered"
+        case .struggling: return "Struggling"
+        case .unseen: return "New"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .mastered: return "checkmark.circle.fill"
+        case .struggling: return "exclamationmark.triangle.fill"
+        case .unseen: return "circle.dotted"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .mastered: return .green
+        case .struggling: return .red
+        case .unseen: return .secondary
+        }
+    }
+}
 
 @Model
 final class Flashcard {
@@ -23,9 +54,18 @@ final class Flashcard {
         self.incorrectCount = 0
     }
 
+    var totalReviews: Int {
+        correctCount + incorrectCount
+    }
+
     var accuracy: Double {
-        let total = correctCount + incorrectCount
-        guard total > 0 else { return 0 }
-        return Double(correctCount) / Double(total)
+        guard totalReviews > 0 else { return 0 }
+        return Double(correctCount) / Double(totalReviews)
+    }
+
+    var masteryStatus: MasteryStatus {
+        guard totalReviews > 0 else { return .unseen }
+        if totalReviews >= 3 && accuracy >= 0.8 { return .mastered }
+        return .struggling
     }
 }
