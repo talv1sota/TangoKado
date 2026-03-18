@@ -208,7 +208,7 @@ struct DeckDetailView: View {
                 launchStudyOnDismiss = true
                 showingStudyPicker = false
             }
-            .presentationDetents([.height(280)])
+            .presentationDetents([.medium])
         }
         .fullScreenCover(isPresented: $showingStudySession) {
             StudySessionView(deck: deck, specificCards: studyCards, reverseMode: reverseMode)

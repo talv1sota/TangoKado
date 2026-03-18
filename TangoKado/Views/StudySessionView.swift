@@ -177,6 +177,12 @@ struct StudySessionView: View {
                 }
             }
         }
+        .onChange(of: session.isFlipped) {
+            if session.isFlipped && autoPronounce {
+                let lang = session.reverseMode ? session.languageCode : "en-US"
+                SpeechHelper.shared.speak(session.displayBack, languageCode: lang)
+            }
+        }
     }
 
     private var studyHeader: some View {
@@ -234,12 +240,6 @@ struct StudySessionView: View {
         )
         .rotation3DEffect(.degrees(session.cardRotation + 180), axis: (x: 0, y: 1, z: 0))
         .opacity(abs(session.cardRotation.truncatingRemainder(dividingBy: 360)) > 90 ? 1 : 0)
-        .onChange(of: session.isFlipped) {
-            if session.isFlipped && autoPronounce {
-                let lang = session.reverseMode ? session.languageCode : "en-US"
-                SpeechHelper.shared.speak(session.displayBack, languageCode: lang)
-            }
-        }
     }
 
     // MARK: - Gesture
