@@ -152,6 +152,7 @@ struct StudyConfig: Identifiable {
     let cards: [Flashcard]?
     let reverseMode: Bool
     let typingMode: Bool
+    let shuffleMode: Bool
 }
 
 enum CardFilter: String, CaseIterable {
@@ -226,14 +227,14 @@ struct DeckDetailView: View {
                 activeStudyConfig = config
             }
         }) {
-            StudyModePicker(deck: deck) { cards, reverse, typing in
-                pendingStudyConfig = StudyConfig(cards: cards, reverseMode: reverse, typingMode: typing)
+            StudyModePicker(deck: deck) { cards, reverse, typing, shuffle in
+                pendingStudyConfig = StudyConfig(cards: cards, reverseMode: reverse, typingMode: typing, shuffleMode: shuffle)
                 showingStudyPicker = false
             }
             .presentationDetents([.medium, .large])
         }
         .fullScreenCover(item: $activeStudyConfig) { config in
-            StudySessionView(deck: deck, specificCards: config.cards, reverseMode: config.reverseMode, typingMode: config.typingMode)
+            StudySessionView(deck: deck, specificCards: config.cards, reverseMode: config.reverseMode, typingMode: config.typingMode, shuffleMode: config.shuffleMode)
         }
     }
 
@@ -415,10 +416,11 @@ enum CardSet: String, CaseIterable {
 
 struct StudyModePicker: View {
     let deck: Deck
-    let onSelect: ([Flashcard]?, Bool, Bool) -> Void
+    let onSelect: ([Flashcard]?, Bool, Bool, Bool) -> Void
     @State private var wordRangeValue: Double = 0
     @State private var reverseMode = false
     @State private var typingMode = false
+    @State private var shuffleMode = true
     @State private var selectedSet: CardSet = .all
 
     private var maxCards: Int { deck.cards.count }
@@ -469,6 +471,8 @@ struct StudyModePicker: View {
                 }
 
                 Section("Options") {
+                    Toggle("Shuffle", isOn: $shuffleMode)
+                        .font(.subheadline)
                     Toggle("Reverse (English → Word)", isOn: $reverseMode)
                         .font(.subheadline)
                     Toggle("Type Answer", isOn: $typingMode)
@@ -476,8 +480,27 @@ struct StudyModePicker: View {
                 }
 
                 Section {
+                    // Quick Start
                     Button {
-                        onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode)
+                        onSelect(nil, false, false, true)
+                    } label: {
+                        HStack {
+                            Image(systemName: "bolt.fill")
+                                .foregroundStyle(.yellow)
+                            Text("Quick Start")
+                                .font(.headline)
+                            Spacer()
+                            Text("All · Shuffled")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Custom Start
+                    Button {
+                        onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
                     } label: {
                         HStack {
                             Spacer()

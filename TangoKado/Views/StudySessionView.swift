@@ -22,16 +22,18 @@ final class StudySession {
     var answerSubmitted = false
     var answerCorrect = false
 
-    init(deck: Deck, specificCards: [Flashcard]?, reverseMode: Bool = false, typingMode: Bool = false) {
+    init(deck: Deck, specificCards: [Flashcard]?, reverseMode: Bool = false, typingMode: Bool = false, shuffleMode: Bool = true) {
         self.deck = deck
         self.languageCode = deck.languageCode
         self.reverseMode = reverseMode
         self.typingMode = typingMode
+        let cards: [Flashcard]
         if let specific = specificCards {
-            self.shuffledCards = specific.shuffled()
+            cards = specific
         } else {
-            self.shuffledCards = Array(deck.cards).shuffled()
+            cards = Array(deck.cards)
         }
+        self.shuffledCards = shuffleMode ? cards.shuffled() : cards.sorted { $0.rank < $1.rank }
     }
 
     var currentCard: Flashcard? {
@@ -299,8 +301,8 @@ struct StudySessionView: View {
     @State private var dragOffset: CGFloat = 0
     @State private var typedText = ""
 
-    init(deck: Deck, specificCards: [Flashcard]? = nil, reverseMode: Bool = false, typingMode: Bool = false) {
-        _session = State(initialValue: StudySession(deck: deck, specificCards: specificCards, reverseMode: reverseMode, typingMode: typingMode))
+    init(deck: Deck, specificCards: [Flashcard]? = nil, reverseMode: Bool = false, typingMode: Bool = false, shuffleMode: Bool = true) {
+        _session = State(initialValue: StudySession(deck: deck, specificCards: specificCards, reverseMode: reverseMode, typingMode: typingMode, shuffleMode: shuffleMode))
     }
 
     var body: some View {
