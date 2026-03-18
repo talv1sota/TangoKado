@@ -11,12 +11,20 @@ struct LanguageInfo: Identifiable {
 
 enum LanguageRegistry {
     static let available: [LanguageInfo] = [
-        LanguageInfo(id: "it-IT", name: "Italian", flag: "\u{1F1EE}\u{1F1F9}", words: ItalianWords.words),
-        LanguageInfo(id: "ru-RU", name: "Russian", flag: "\u{1F1F7}\u{1F1FA}", words: RussianWords.words),
-        LanguageInfo(id: "ja-JP", name: "Japanese", flag: "\u{1F1EF}\u{1F1F5}", words: JapaneseWords.words),
-        LanguageInfo(id: "nl-NL", name: "Dutch", flag: "\u{1F1F3}\u{1F1F1}", words: DutchWords.words),
-        LanguageInfo(id: "de-DE", name: "German", flag: "\u{1F1E9}\u{1F1EA}", words: GermanWords.words),
-        LanguageInfo(id: "hr-HR", name: "Croatian", flag: "\u{1F1ED}\u{1F1F7}", words: CroatianWords.words),
+        LanguageInfo(id: "es-ES", name: "Spanish", flag: "🇪🇸", words: SpanishWords.words),
+        LanguageInfo(id: "fr-FR", name: "French", flag: "🇫🇷", words: FrenchWords.words),
+        LanguageInfo(id: "pt-BR", name: "Portuguese", flag: "🇧🇷", words: PortugueseWords.words),
+        LanguageInfo(id: "de-DE", name: "German", flag: "🇩🇪", words: GermanWords.words),
+        LanguageInfo(id: "it-IT", name: "Italian", flag: "🇮🇹", words: ItalianWords.words),
+        LanguageInfo(id: "nl-NL", name: "Dutch", flag: "🇳🇱", words: DutchWords.words),
+        LanguageInfo(id: "hr-HR", name: "Croatian", flag: "🇭🇷", words: CroatianWords.words),
+        LanguageInfo(id: "pl-PL", name: "Polish", flag: "🇵🇱", words: PolishWords.words),
+        LanguageInfo(id: "tr-TR", name: "Turkish", flag: "🇹🇷", words: TurkishWords.words),
+        LanguageInfo(id: "ru-RU", name: "Russian", flag: "🇷🇺", words: RussianWords.words),
+        LanguageInfo(id: "ja-JP", name: "Japanese", flag: "🇯🇵", words: JapaneseWords.words),
+        LanguageInfo(id: "ko-KR", name: "Korean", flag: "🇰🇷", words: KoreanWords.words),
+        LanguageInfo(id: "zh-CN", name: "Chinese", flag: "🇨🇳", words: ChineseWords.words),
+        LanguageInfo(id: "ar-SA", name: "Arabic", flag: "🇸🇦", words: ArabicWords.words),
     ]
 
     static func language(for code: String) -> LanguageInfo? {

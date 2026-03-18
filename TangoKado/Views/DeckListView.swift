@@ -401,39 +401,61 @@ struct ProgressDashboard: View {
 struct StudyModePicker: View {
     let deck: Deck
     let onSelect: ([Flashcard]?, Bool, Bool) -> Void
+    @State private var wordRange: Int = 0
     @State private var sessionLimit: Int = 0
     @State private var reverseMode = false
     @State private var typingMode = false
 
+    private var rangedCards: [Flashcard] {
+        guard wordRange > 0 else { return Array(deck.cards) }
+        return Array(deck.cards).filter { $0.rank <= wordRange }
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                Section("Cards") {
-                    studyRow(icon: "play.fill", title: "All Cards", count: deck.cards.count, color: .indigo) {
-                        onSelect(limitCards(nil), reverseMode, typingMode)
+                Section("Word Range") {
+                    Picker("Study words ranked", selection: $wordRange) {
+                        Text("All").tag(0)
+                        Text("Top 15").tag(15)
+                        Text("Top 100").tag(100)
+                        Text("Top 300").tag(300)
+                        if deck.cards.count > 300 {
+                            Text("Top 500").tag(500)
+                        }
+                        if deck.cards.count > 500 {
+                            Text("Top 1000").tag(1000)
+                        }
                     }
-                    let weak = Array(deck.strugglingCards)
+                    .pickerStyle(.segmented)
+                }
+
+                Section("Study") {
+                    studyRow(icon: "play.fill", title: "All", count: rangedCards.count, color: .indigo) {
+                        onSelect(applyLimit(rangedCards), reverseMode, typingMode)
+                    }
+                    let weak = rangedCards.filter { $0.masteryStatus == .struggling }
                     if !weak.isEmpty {
-                        studyRow(icon: "exclamationmark.triangle.fill", title: "Weak Cards", count: weak.count, color: .red) {
-                            onSelect(limitCards(weak), reverseMode, typingMode)
+                        studyRow(icon: "exclamationmark.triangle.fill", title: "Weak", count: weak.count, color: .red) {
+                            onSelect(applyLimit(weak), reverseMode, typingMode)
                         }
                     }
-                    let mastered = Array(deck.masteredCards)
+                    let mastered = rangedCards.filter { $0.masteryStatus == .mastered }
                     if !mastered.isEmpty {
-                        studyRow(icon: "checkmark.circle.fill", title: "Known Cards", count: mastered.count, color: .green) {
-                            onSelect(limitCards(mastered), reverseMode, typingMode)
+                        studyRow(icon: "checkmark.circle.fill", title: "Known", count: mastered.count, color: .green) {
+                            onSelect(applyLimit(mastered), reverseMode, typingMode)
                         }
                     }
-                    let new = Array(deck.unseenCards)
-                    if !new.isEmpty {
-                        studyRow(icon: "sparkles", title: "New Cards", count: new.count, color: .orange) {
-                            onSelect(limitCards(new), reverseMode, typingMode)
+                    let unseen = rangedCards.filter { $0.masteryStatus == .unseen }
+                    if !unseen.isEmpty {
+                        studyRow(icon: "sparkles", title: "New", count: unseen.count, color: .orange) {
+                            onSelect(applyLimit(unseen), reverseMode, typingMode)
                         }
                     }
                 }
 
                 Section("Options") {
-                    Picker("Cards per session", selection: $sessionLimit) {
+                    Picker("Per session", selection: $sessionLimit) {
                         Text("All").tag(0)
                         Text("10").tag(10)
                         Text("25").tag(25)
@@ -453,12 +475,9 @@ struct StudyModePicker: View {
         }
     }
 
-    private func limitCards(_ cards: [Flashcard]?) -> [Flashcard]? {
+    private func applyLimit(_ cards: [Flashcard]) -> [Flashcard]? {
         guard sessionLimit > 0 else { return cards }
-        if let cards = cards {
-            return Array(cards.prefix(sessionLimit))
-        }
-        return Array(Array(deck.cards).prefix(sessionLimit))
+        return Array(cards.prefix(sessionLimit))
     }
 
     private func studyRow(icon: String, title: String, count: Int, color: Color, action: @escaping () -> Void) -> some View {
