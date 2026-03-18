@@ -145,9 +145,9 @@ struct StudyConfig: Identifiable {
 
 enum CardFilter: String, CaseIterable {
     case all = "All"
-    case mastered = "Mastered"
-    case struggling = "Learning"
-    case unseen = "New"
+    case mastered = "Correct"
+    case struggling = "Incorrect"
+    case unseen = "Skipped"
 }
 
 struct DeckDetailView: View {
@@ -241,7 +241,7 @@ struct DeckDetailView: View {
                         Text("Start Studying")
                             .font(.headline)
                             .foregroundStyle(.primary)
-                        Text("\(deck.cards.count) total · \(deck.masteredCards.count) known · \(deck.unseenCards.count) new")
+                        Text("\(deck.cards.count) total · \(deck.masteredCards.count) correct · \(deck.strugglingCards.count) incorrect")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -373,9 +373,9 @@ struct ProgressDashboard: View {
 
     private var progressLabels: some View {
         HStack(spacing: 16) {
-            progressLabel(count: deck.masteredCards.count, label: "Mastered", color: .green)
-            progressLabel(count: deck.strugglingCards.count, label: "Learning", color: .orange)
-            progressLabel(count: deck.unseenCards.count, label: "New", color: .secondary)
+            progressLabel(count: deck.masteredCards.count, label: "Correct", color: .green)
+            progressLabel(count: deck.strugglingCards.count, label: "Incorrect", color: .orange)
+            progressLabel(count: deck.unseenCards.count, label: "Skipped", color: .secondary)
         }
     }
 
@@ -436,24 +436,24 @@ struct StudyModePicker: View {
                 }
 
                 Section("Study") {
-                    studyRow(icon: "play.fill", title: "All", count: rangedCards.count, color: .indigo) {
+                    studyRow(icon: "play.fill", title: "All Cards", count: rangedCards.count, color: .indigo) {
                         onSelect(applyLimit(rangedCards), reverseMode, typingMode)
                     }
                     let weak = rangedCards.filter { $0.masteryStatus == .struggling }
                     if !weak.isEmpty {
-                        studyRow(icon: "arrow.triangle.2.circlepath", title: "Learning", count: weak.count, color: .orange) {
+                        studyRow(icon: "xmark.circle", title: "Incorrect", count: weak.count, color: .orange) {
                             onSelect(applyLimit(weak), reverseMode, typingMode)
                         }
                     }
                     let mastered = rangedCards.filter { $0.masteryStatus == .mastered }
                     if !mastered.isEmpty {
-                        studyRow(icon: "checkmark.circle.fill", title: "Known", count: mastered.count, color: .green) {
+                        studyRow(icon: "checkmark.circle", title: "Correct", count: mastered.count, color: .green) {
                             onSelect(applyLimit(mastered), reverseMode, typingMode)
                         }
                     }
                     let unseen = rangedCards.filter { $0.masteryStatus == .unseen }
                     if !unseen.isEmpty {
-                        studyRow(icon: "sparkles", title: "New", count: unseen.count, color: .orange) {
+                        studyRow(icon: "circle.dotted", title: "Skipped", count: unseen.count, color: .secondary) {
                             onSelect(applyLimit(unseen), reverseMode, typingMode)
                         }
                     }

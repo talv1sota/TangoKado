@@ -9,9 +9,9 @@ enum MasteryStatus: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .mastered: return "Mastered"
-        case .struggling: return "Struggling"
-        case .unseen: return "New"
+        case .mastered: return "Correct"
+        case .struggling: return "Incorrect"
+        case .unseen: return "Skipped"
         }
     }
 
@@ -36,6 +36,7 @@ enum MasteryStatus: String, CaseIterable {
 final class Flashcard {
     var front: String
     var back: String
+    var example: String
     var rank: Int
     var createdAt: Date
     var lastReviewedAt: Date?
@@ -45,9 +46,10 @@ final class Flashcard {
     @Relationship(inverse: \Deck.cards)
     var deck: Deck?
 
-    init(front: String, back: String, rank: Int = 0) {
+    init(front: String, back: String, example: String = "", rank: Int = 0) {
         self.front = front
         self.back = back
+        self.example = example
         self.rank = rank
         self.createdAt = Date()
         self.correctCount = 0

@@ -398,7 +398,8 @@ struct StudySessionView: View {
             text: session.displayBack,
             subtitle: session.reverseMode ? "#\(session.currentCard?.rank ?? 0)" : "Answer",
             color: session.reverseMode ? .indigo : .blue,
-            speakLanguage: session.reverseMode ? session.languageCode : "en-US"
+            speakLanguage: session.reverseMode ? session.languageCode : "en-US",
+            example: session.currentCard?.example ?? ""
         )
         .rotation3DEffect(.degrees(session.cardRotation + 180), axis: (x: 0, y: 1, z: 0))
         .opacity(abs(session.cardRotation.truncatingRemainder(dividingBy: 360)) > 90 ? 1 : 0)
@@ -785,9 +786,10 @@ struct StudyCardFace: View {
     let subtitle: String
     let color: Color
     let speakLanguage: String?
+    var example: String = ""
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             Text(subtitle)
                 .font(.caption.weight(.semibold))
                 .textCase(.uppercase)
@@ -795,11 +797,20 @@ struct StudyCardFace: View {
                 .tracking(1)
 
             Text(text)
-                .font(.system(size: 30, weight: .bold))
+                .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.4)
                 .padding(.horizontal, 20)
+
+            if !example.isEmpty {
+                Text(example)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .padding(.horizontal, 16)
+            }
 
             if let lang = speakLanguage {
                 Button {
