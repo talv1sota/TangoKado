@@ -73,7 +73,11 @@ final class StudySession {
 
     func markCorrect() {
         guard let card = currentCard else { return }
-        card.correctCount += 1
+        if typingMode {
+            card.typingCorrectCount += 1
+        } else {
+            card.correctCount += 1
+        }
         card.lastReviewedAt = Date()
         correctCount += 1
         correctCards.append(card)
@@ -83,7 +87,11 @@ final class StudySession {
 
     func markIncorrect() {
         guard let card = currentCard else { return }
-        card.incorrectCount += 1
+        if typingMode {
+            card.typingIncorrectCount += 1
+        } else {
+            card.incorrectCount += 1
+        }
         card.lastReviewedAt = Date()
         incorrectCount += 1
         incorrectCards.append(card)
@@ -127,7 +135,7 @@ final class StudySession {
         guard !typed.isEmpty else {
             answerCorrect = false
             guard let card = currentCard else { return }
-            card.incorrectCount += 1
+            card.typingIncorrectCount += 1
             card.lastReviewedAt = Date()
             incorrectCount += 1
             incorrectCards.append(card)
@@ -138,26 +146,23 @@ final class StudySession {
         let correctRaw = displayBack
         var acceptable: Set<String> = []
 
-        // Split by "/" for alternatives
         let slashParts = correctRaw.components(separatedBy: "/").map { $0.trimmingCharacters(in: .whitespaces) }
         for part in slashParts {
             addVariants(of: part, to: &acceptable)
         }
-        // Full string too
         addVariants(of: correctRaw, to: &acceptable)
 
-        // Check exact match first, then check if typed is contained in any acceptable or vice versa
         answerCorrect = acceptable.contains(typed) || acceptable.contains(where: { typed.contains($0) || $0.contains(typed) })
 
         guard let card = currentCard else { return }
         if answerCorrect {
-            card.correctCount += 1
+            card.typingCorrectCount += 1
             card.lastReviewedAt = Date()
             correctCount += 1
             correctCards.append(card)
             haptic(.success)
         } else {
-            card.incorrectCount += 1
+            card.typingIncorrectCount += 1
             card.lastReviewedAt = Date()
             incorrectCount += 1
             incorrectCards.append(card)
@@ -388,7 +393,11 @@ final class StudySession {
         answerSubmitted = true
         answerCorrect = false
         guard let card = currentCard else { return }
-        card.incorrectCount += 1
+        if typingMode {
+            card.typingIncorrectCount += 1
+        } else {
+            card.incorrectCount += 1
+        }
         card.lastReviewedAt = Date()
         incorrectCount += 1
         incorrectCards.append(card)
