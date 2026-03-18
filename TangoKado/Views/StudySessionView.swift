@@ -105,36 +105,30 @@ final class StudySession {
         answerSubmitted = true
 
         let typed = normalize(typedAnswer)
-        let correctRaw = displayBack
+        guard !typed.isEmpty else {
+            answerCorrect = false
+            guard let card = currentCard else { return }
+            card.incorrectCount += 1
+            card.lastReviewedAt = Date()
+            incorrectCount += 1
+            incorrectCards.append(card)
+            haptic(.error)
+            return
+        }
 
-        // Generate all acceptable answers from the correct text
+        let correctRaw = displayBack
         var acceptable: Set<String> = []
 
-        // Split by "/" for alternatives like "of/from"
+        // Split by "/" for alternatives
         let slashParts = correctRaw.components(separatedBy: "/").map { $0.trimmingCharacters(in: .whitespaces) }
         for part in slashParts {
-            let n = normalize(part)
-            acceptable.insert(n)
-            // Strip "to " prefix for verbs ("to eat" matches "eat")
-            if n.hasPrefix("to ") {
-                acceptable.insert(String(n.dropFirst(3)))
-            }
-            // Strip parenthetical like "(informal)" or "(m.)"
-            let stripped = normalize(part.replacingOccurrences(of: "\\s*\\(.*?\\)", with: "", options: .regularExpression))
-            acceptable.insert(stripped)
-            if stripped.hasPrefix("to ") {
-                acceptable.insert(String(stripped.dropFirst(3)))
-            }
+            addVariants(of: part, to: &acceptable)
         }
+        // Full string too
+        addVariants(of: correctRaw, to: &acceptable)
 
-        // Also try the full string without slashes
-        let fullNorm = normalize(correctRaw)
-        acceptable.insert(fullNorm)
-        if fullNorm.hasPrefix("to ") {
-            acceptable.insert(String(fullNorm.dropFirst(3)))
-        }
-
-        answerCorrect = acceptable.contains(typed)
+        // Check exact match first, then check if typed is contained in any acceptable or vice versa
+        answerCorrect = acceptable.contains(typed) || acceptable.contains(where: { typed.contains($0) || $0.contains(typed) })
 
         guard let card = currentCard else { return }
         if answerCorrect {
@@ -152,10 +146,32 @@ final class StudySession {
         }
     }
 
+    private func addVariants(of text: String, to set: inout Set<String>) {
+        let n = normalize(text)
+        set.insert(n)
+
+        // Strip "to " prefix for verbs
+        if n.hasPrefix("to ") {
+            set.insert(String(n.dropFirst(3)))
+        }
+        // Strip "a/an " prefix
+        if n.hasPrefix("a ") { set.insert(String(n.dropFirst(2))) }
+        if n.hasPrefix("an ") { set.insert(String(n.dropFirst(3))) }
+        if n.hasPrefix("the ") { set.insert(String(n.dropFirst(4))) }
+
+        // Strip parenthetical like "(informal)", "(m.)", "(wa)"
+        let stripped = normalize(text.replacingOccurrences(of: "\\s*\\(.*?\\)", with: "", options: .regularExpression))
+        set.insert(stripped)
+        if stripped.hasPrefix("to ") { set.insert(String(stripped.dropFirst(3))) }
+        if stripped.hasPrefix("a ") { set.insert(String(stripped.dropFirst(2))) }
+        if stripped.hasPrefix("an ") { set.insert(String(stripped.dropFirst(3))) }
+        if stripped.hasPrefix("the ") { set.insert(String(stripped.dropFirst(4))) }
+    }
+
     private func normalize(_ text: String) -> String {
         text.lowercased()
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: .diacriticInsensitive, locale: .current) // è → e, ü → u
+            .folding(options: .diacriticInsensitive, locale: .current)
     }
 
     func revealAnswer() {
@@ -208,6 +224,7 @@ struct StudySessionView: View {
     @State private var session: StudySession
     @State private var showingReStudy = false
     @State private var dragOffset: CGFloat = 0
+    @State private var typedText = ""
 
     init(deck: Deck, specificCards: [Flashcard]? = nil, reverseMode: Bool = false, typingMode: Bool = false) {
         _session = State(initialValue: StudySession(deck: deck, specificCards: specificCards, reverseMode: reverseMode, typingMode: typingMode))
@@ -389,6 +406,7 @@ struct StudySessionView: View {
                     }
                     Button {
                         session.typingNextCard()
+                        typedText = ""
                         typingFocused = true
                     } label: {
                         Label("Skip", systemImage: "forward.fill")
@@ -406,14 +424,15 @@ struct StudySessionView: View {
 
     private var typingInputField: some View {
         VStack(spacing: 14) {
-            TextField("Your answer...", text: $session.typedAnswer)
+            TextField("Your answer...", text: $typedText)
                 .font(.title3)
                 .multilineTextAlignment(.center)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .focused($typingFocused)
                 .onSubmit {
-                    if !session.typedAnswer.isEmpty {
+                    if !typedText.isEmpty {
+                        session.typedAnswer = typedText
                         session.submitTypedAnswer()
                     }
                 }
@@ -426,17 +445,18 @@ struct StudySessionView: View {
                 .padding(.horizontal, 24)
 
             Button {
+                session.typedAnswer = typedText
                 session.submitTypedAnswer()
             } label: {
                 Text("Check")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(session.typedAnswer.isEmpty ? Color(.systemGray4) : .indigo)
+                    .background(typedText.isEmpty ? Color(.systemGray4) : .indigo)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
-            .disabled(session.typedAnswer.isEmpty)
+            .disabled(typedText.isEmpty)
             .padding(.horizontal, 24)
         }
     }
@@ -453,6 +473,9 @@ struct StudySessionView: View {
                     Text("Correct!")
                         .font(.headline)
                         .foregroundStyle(.green)
+                    Text(session.displayBack)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 } else {
                     if !session.typedAnswer.isEmpty {
                         Text(session.typedAnswer)
