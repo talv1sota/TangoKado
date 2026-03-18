@@ -67,7 +67,7 @@ final class Flashcard {
 
     var masteryStatus: MasteryStatus {
         guard totalReviews > 0 else { return .unseen }
-        if totalReviews >= 3 && accuracy >= 0.8 { return .mastered }
+        if accuracy >= 0.8 { return .mastered }
         return .struggling
     }
 }
