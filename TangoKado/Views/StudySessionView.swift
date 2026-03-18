@@ -146,6 +146,66 @@ final class StudySession {
         }
     }
 
+    private static let synonyms: [String: [String]] = [
+        "yes": ["ok", "okay", "yeah", "yep", "yea", "sure"],
+        "no": ["nope", "nah"],
+        "hello": ["hi", "hey", "greetings"],
+        "goodbye": ["bye", "see you", "farewell"],
+        "thank you": ["thanks", "cheers"],
+        "please": ["pls"],
+        "excuse me": ["sorry", "pardon"],
+        "good": ["fine", "well", "great", "nice"],
+        "bad": ["poor", "terrible"],
+        "big": ["large", "huge"],
+        "small": ["little", "tiny"],
+        "beautiful": ["pretty", "lovely", "gorgeous"],
+        "happy": ["glad", "joyful", "cheerful"],
+        "sad": ["unhappy", "upset"],
+        "man": ["guy", "male"],
+        "woman": ["lady", "female"],
+        "child": ["kid"],
+        "house": ["home"],
+        "car": ["automobile", "vehicle"],
+        "food": ["meal"],
+        "water": ["h2o"],
+        "money": ["cash"],
+        "work": ["job"],
+        "friend": ["pal", "buddy", "mate"],
+        "speak": ["talk"],
+        "eat": ["consume"],
+        "drink": ["sip"],
+        "walk": ["stroll"],
+        "run": ["sprint", "jog"],
+        "fast": ["quick", "rapid"],
+        "slow": ["sluggish"],
+        "begin": ["start"],
+        "end": ["finish", "stop"],
+        "buy": ["purchase"],
+        "sell": ["vend"],
+        "give": ["offer"],
+        "take": ["grab", "get"],
+        "look": ["watch", "see"],
+        "listen": ["hear"],
+        "want": ["desire", "wish"],
+        "need": ["require"],
+        "like": ["enjoy"],
+        "love": ["adore"],
+        "hate": ["despise", "detest"],
+        "think": ["believe", "consider"],
+        "know": ["understand"],
+        "learn": ["study"],
+        "help": ["assist", "aid"],
+        "try": ["attempt"],
+        "also": ["too", "as well"],
+        "very": ["really", "extremely"],
+        "always": ["forever"],
+        "never": ["not ever"],
+        "maybe": ["perhaps", "possibly"],
+        "now": ["currently", "at the moment"],
+        "difficult": ["hard", "tough"],
+        "easy": ["simple"],
+    ]
+
     private func addVariants(of text: String, to set: inout Set<String>) {
         let n = normalize(text)
         set.insert(n)
@@ -154,7 +214,7 @@ final class StudySession {
         if n.hasPrefix("to ") {
             set.insert(String(n.dropFirst(3)))
         }
-        // Strip "a/an " prefix
+        // Strip "a/an/the " prefix
         if n.hasPrefix("a ") { set.insert(String(n.dropFirst(2))) }
         if n.hasPrefix("an ") { set.insert(String(n.dropFirst(3))) }
         if n.hasPrefix("the ") { set.insert(String(n.dropFirst(4))) }
@@ -166,6 +226,19 @@ final class StudySession {
         if stripped.hasPrefix("a ") { set.insert(String(stripped.dropFirst(2))) }
         if stripped.hasPrefix("an ") { set.insert(String(stripped.dropFirst(3))) }
         if stripped.hasPrefix("the ") { set.insert(String(stripped.dropFirst(4))) }
+
+        // Add synonyms
+        for word in set {
+            if let syns = Self.synonyms[word] {
+                for s in syns { set.insert(s) }
+            }
+        }
+        // Reverse lookup — if a synonym is the correct answer, accept the base word too
+        for (base, syns) in Self.synonyms {
+            if set.contains(where: { syns.contains($0) }) {
+                set.insert(base)
+            }
+        }
     }
 
     private func normalize(_ text: String) -> String {
@@ -498,6 +571,7 @@ struct StudySessionView: View {
 
             Button {
                 session.typingNextCard()
+                typedText = ""
                 typingFocused = true
             } label: {
                 Text("Next")
