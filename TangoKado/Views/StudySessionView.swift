@@ -8,6 +8,7 @@ final class StudySession {
     let deck: Deck
     let languageCode: String
     let reverseMode: Bool
+    let typingMode: Bool
     var shuffledCards: [Flashcard]
     var currentIndex = 0
     var isFlipped = false
@@ -17,11 +18,15 @@ final class StudySession {
     var showingResults = false
     var correctCards: [Flashcard] = []
     var incorrectCards: [Flashcard] = []
+    var typedAnswer = ""
+    var answerSubmitted = false
+    var answerCorrect = false
 
-    init(deck: Deck, specificCards: [Flashcard]?, reverseMode: Bool = false) {
+    init(deck: Deck, specificCards: [Flashcard]?, reverseMode: Bool = false, typingMode: Bool = false) {
         self.deck = deck
         self.languageCode = deck.languageCode
         self.reverseMode = reverseMode
+        self.typingMode = typingMode
         if let specific = specificCards {
             self.shuffledCards = specific.shuffled()
         } else {
@@ -95,9 +100,41 @@ final class StudySession {
         haptic(.light)
     }
 
+    func submitTypedAnswer() {
+        guard !answerSubmitted else { return }
+        answerSubmitted = true
+        let correct = displayBack.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let typed = typedAnswer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        // Match any slash-separated alternative (e.g. "of/from" matches "of" or "from")
+        let answers = correct.components(separatedBy: "/").map { $0.trimmingCharacters(in: .whitespaces) }
+        answerCorrect = answers.contains(typed) || typed == correct
+
+        guard let card = currentCard else { return }
+        if answerCorrect {
+            card.correctCount += 1
+            card.lastReviewedAt = Date()
+            correctCount += 1
+            correctCards.append(card)
+            haptic(.success)
+        } else {
+            card.incorrectCount += 1
+            card.lastReviewedAt = Date()
+            incorrectCount += 1
+            incorrectCards.append(card)
+            haptic(.error)
+        }
+    }
+
+    func typingNextCard() {
+        advance()
+    }
+
     private func resetCardState() {
         isFlipped = false
         cardRotation = 0
+        typedAnswer = ""
+        answerSubmitted = false
+        answerCorrect = false
     }
 
     private func haptic(_ type: HapticType) {
@@ -127,8 +164,8 @@ struct StudySessionView: View {
     @State private var showingReStudy = false
     @State private var dragOffset: CGFloat = 0
 
-    init(deck: Deck, specificCards: [Flashcard]? = nil, reverseMode: Bool = false) {
-        _session = State(initialValue: StudySession(deck: deck, specificCards: specificCards, reverseMode: reverseMode))
+    init(deck: Deck, specificCards: [Flashcard]? = nil, reverseMode: Bool = false, typingMode: Bool = false) {
+        _session = State(initialValue: StudySession(deck: deck, specificCards: specificCards, reverseMode: reverseMode, typingMode: typingMode))
     }
 
     var body: some View {
@@ -150,16 +187,21 @@ struct StudySessionView: View {
             studyHeader
                 .padding(.bottom, 8)
 
-            cardArea
-                .frame(maxHeight: .infinity)
+            if session.typingMode {
+                typingArea
+                    .frame(maxHeight: .infinity)
+            } else {
+                cardArea
+                    .frame(maxHeight: .infinity)
 
-            Text("Tap to flip")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.top, 4)
-                .padding(.bottom, 8)
+                Text("Tap to flip")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
 
-            actionButtons
+                actionButtons
+            }
         }
         .navigationTitle(session.deck.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -225,6 +267,89 @@ struct StudySessionView: View {
         )
         .rotation3DEffect(.degrees(session.cardRotation + 180), axis: (x: 0, y: 1, z: 0))
         .opacity(abs(session.cardRotation.truncatingRemainder(dividingBy: 360)) > 90 ? 1 : 0)
+    }
+
+    // MARK: - Typing Mode
+
+    @FocusState private var typingFocused: Bool
+
+    private var typingArea: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            // Show the prompt (front of card)
+            VStack(spacing: 8) {
+                Text(session.reverseMode ? "English" : "#\(session.currentCard?.rank ?? 0)")
+                    .font(.caption.weight(.semibold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(.secondary)
+                Text(session.displayFront)
+                    .font(.system(size: 28, weight: .bold))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+
+            // Text field
+            TextField("Type the answer...", text: $session.typedAnswer)
+                .textFieldStyle(.roundedBorder)
+                .font(.title3)
+                .multilineTextAlignment(.center)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .focused($typingFocused)
+                .disabled(session.answerSubmitted)
+                .onSubmit { session.submitTypedAnswer() }
+                .padding(.horizontal, 32)
+
+            // Result feedback
+            if session.answerSubmitted {
+                VStack(spacing: 8) {
+                    if session.answerCorrect {
+                        Label("Correct!", systemImage: "checkmark.circle.fill")
+                            .font(.headline)
+                            .foregroundStyle(.green)
+                    } else {
+                        Label("Incorrect", systemImage: "xmark.circle.fill")
+                            .font(.headline)
+                            .foregroundStyle(.red)
+                        Text(session.displayBack)
+                            .font(.title3.bold())
+                            .foregroundStyle(.primary)
+                    }
+
+                    Button {
+                        session.typingNextCard()
+                        typingFocused = true
+                    } label: {
+                        Text("Next")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(session.answerCorrect ? .green : .indigo)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.horizontal, 32)
+                }
+            } else {
+                Button {
+                    session.submitTypedAnswer()
+                } label: {
+                    Text("Check")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(session.typedAnswer.isEmpty ? Color(.systemGray4) : .indigo)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .disabled(session.typedAnswer.isEmpty)
+                .padding(.horizontal, 32)
+            }
+
+            Spacer()
+        }
+        .onAppear { typingFocused = true }
     }
 
     // MARK: - Gesture
