@@ -274,82 +274,135 @@ struct StudySessionView: View {
     @FocusState private var typingFocused: Bool
 
     private var typingArea: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
             Spacer()
 
-            // Show the prompt (front of card)
-            VStack(spacing: 8) {
-                Text(session.reverseMode ? "English" : "#\(session.currentCard?.rank ?? 0)")
+            // Card-style prompt
+            VStack(spacing: 12) {
+                Text(session.reverseMode ? "ENGLISH" : "#\(session.currentCard?.rank ?? 0)")
                     .font(.caption.weight(.semibold))
                     .textCase(.uppercase)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .tracking(1)
+
                 Text(session.displayFront)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                    .minimumScaleFactor(0.4)
+                    .padding(.horizontal, 20)
+
+                if let lang = session.reverseMode ? "en-US" : Optional(session.languageCode) {
+                    Button {
+                        SpeechHelper.shared.speak(session.displayFront, languageCode: lang)
+                    } label: {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.8))
+                            .padding(10)
+                            .background(.white.opacity(0.15), in: Circle())
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill((session.reverseMode ? Color.blue : Color.indigo).gradient)
+                    .shadow(color: .indigo.opacity(0.3), radius: 12, y: 6)
+            )
+            .padding(.horizontal)
+
+            Spacer().frame(height: 24)
+
+            // Answer input
+            if session.answerSubmitted {
+                typingResultFeedback
+            } else {
+                typingInputField
             }
 
-            // Text field
-            TextField("Type the answer...", text: $session.typedAnswer)
+            Spacer()
+
+            // Skip button
+            if !session.answerSubmitted {
+                Button {
+                    session.typingNextCard()
+                    typingFocused = true
+                } label: {
+                    Text("Skip")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.bottom, 16)
+            } else {
+                Color.clear.frame(height: 40)
+            }
+        }
+        .onAppear { typingFocused = true }
+    }
+
+    private var typingInputField: some View {
+        VStack(spacing: 16) {
+            TextField("Type your answer...", text: $session.typedAnswer)
                 .textFieldStyle(.roundedBorder)
                 .font(.title3)
                 .multilineTextAlignment(.center)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .focused($typingFocused)
-                .disabled(session.answerSubmitted)
-                .onSubmit { session.submitTypedAnswer() }
-                .padding(.horizontal, 32)
-
-            // Result feedback
-            if session.answerSubmitted {
-                VStack(spacing: 8) {
-                    if session.answerCorrect {
-                        Label("Correct!", systemImage: "checkmark.circle.fill")
-                            .font(.headline)
-                            .foregroundStyle(.green)
-                    } else {
-                        Label("Incorrect", systemImage: "xmark.circle.fill")
-                            .font(.headline)
-                            .foregroundStyle(.red)
-                        Text(session.displayBack)
-                            .font(.title3.bold())
-                            .foregroundStyle(.primary)
+                .onSubmit {
+                    if !session.typedAnswer.isEmpty {
+                        session.submitTypedAnswer()
                     }
-
-                    Button {
-                        session.typingNextCard()
-                        typingFocused = true
-                    } label: {
-                        Text("Next")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(session.answerCorrect ? .green : .indigo)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-                    .padding(.horizontal, 32)
                 }
+                .padding(.horizontal, 24)
+
+            Button {
+                session.submitTypedAnswer()
+            } label: {
+                Text("Check")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(session.typedAnswer.isEmpty ? Color(.systemGray4) : .indigo)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .disabled(session.typedAnswer.isEmpty)
+            .padding(.horizontal, 24)
+        }
+    }
+
+    private var typingResultFeedback: some View {
+        VStack(spacing: 12) {
+            if session.answerCorrect {
+                Label("Correct!", systemImage: "checkmark.circle.fill")
+                    .font(.title3.bold())
+                    .foregroundStyle(.green)
             } else {
-                Button {
-                    session.submitTypedAnswer()
-                } label: {
-                    Text("Check")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(session.typedAnswer.isEmpty ? Color(.systemGray4) : .indigo)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .disabled(session.typedAnswer.isEmpty)
-                .padding(.horizontal, 32)
+                Label("Incorrect", systemImage: "xmark.circle.fill")
+                    .font(.title3.bold())
+                    .foregroundStyle(.red)
+                Text(session.displayBack)
+                    .font(.title2.bold())
+                    .padding(.top, 2)
             }
 
-            Spacer()
+            Button {
+                session.typingNextCard()
+                typingFocused = true
+            } label: {
+                Text("Next")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(session.answerCorrect ? .green : .indigo)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .padding(.horizontal, 24)
         }
-        .onAppear { typingFocused = true }
     }
 
     // MARK: - Gesture
