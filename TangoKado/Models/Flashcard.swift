@@ -18,7 +18,7 @@ enum MasteryStatus: String, CaseIterable {
     var icon: String {
         switch self {
         case .mastered: return "checkmark.circle.fill"
-        case .struggling: return "exclamationmark.triangle.fill"
+        case .struggling: return "arrow.triangle.2.circlepath"
         case .unseen: return "circle.dotted"
         }
     }
@@ -26,7 +26,7 @@ enum MasteryStatus: String, CaseIterable {
     var color: Color {
         switch self {
         case .mastered: return .green
-        case .struggling: return .red
+        case .struggling: return .orange
         case .unseen: return .secondary
         }
     }

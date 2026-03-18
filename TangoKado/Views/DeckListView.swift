@@ -120,14 +120,10 @@ struct DeckRow: View {
                 Text(deck.name)
                     .font(.headline)
                 HStack(spacing: 10) {
-                    Label("\(deck.cards.count)", systemImage: "rectangle.stack.fill")
+                    Label("\(deck.cards.count) words", systemImage: "rectangle.stack.fill")
                     if deck.masteredCards.count > 0 {
-                        Label("\(deck.masteredCards.count)", systemImage: "checkmark.circle.fill")
+                        Label("\(deck.masteredCards.count) known", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
-                    }
-                    if deck.strugglingCards.count > 0 {
-                        Label("\(deck.strugglingCards.count)", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
                     }
                 }
                 .font(.caption)
@@ -150,7 +146,7 @@ struct StudyConfig: Identifiable {
 enum CardFilter: String, CaseIterable {
     case all = "All"
     case mastered = "Mastered"
-    case struggling = "Weak"
+    case struggling = "Learning"
     case unseen = "New"
 }
 
@@ -245,7 +241,7 @@ struct DeckDetailView: View {
                         Text("Start Studying")
                             .font(.headline)
                             .foregroundStyle(.primary)
-                        Text("\(deck.cards.count) total · \(deck.strugglingCards.count) weak · \(deck.unseenCards.count) new")
+                        Text("\(deck.cards.count) total · \(deck.masteredCards.count) known · \(deck.unseenCards.count) new")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -366,7 +362,7 @@ struct ProgressDashboard: View {
                     RoundedRectangle(cornerRadius: 4).fill(.green).frame(width: max(mW, 2))
                 }
                 if deck.strugglingCards.count > 0 {
-                    RoundedRectangle(cornerRadius: 4).fill(.red).frame(width: max(sW, 2))
+                    RoundedRectangle(cornerRadius: 4).fill(.orange).frame(width: max(sW, 2))
                 }
                 RoundedRectangle(cornerRadius: 4).fill(Color(.systemGray4))
             }
@@ -378,7 +374,7 @@ struct ProgressDashboard: View {
     private var progressLabels: some View {
         HStack(spacing: 16) {
             progressLabel(count: deck.masteredCards.count, label: "Mastered", color: .green)
-            progressLabel(count: deck.strugglingCards.count, label: "Weak", color: .red)
+            progressLabel(count: deck.strugglingCards.count, label: "Learning", color: .orange)
             progressLabel(count: deck.unseenCards.count, label: "New", color: .secondary)
         }
     }
@@ -445,7 +441,7 @@ struct StudyModePicker: View {
                     }
                     let weak = rangedCards.filter { $0.masteryStatus == .struggling }
                     if !weak.isEmpty {
-                        studyRow(icon: "exclamationmark.triangle.fill", title: "Weak", count: weak.count, color: .red) {
+                        studyRow(icon: "arrow.triangle.2.circlepath", title: "Learning", count: weak.count, color: .orange) {
                             onSelect(applyLimit(weak), reverseMode, typingMode)
                         }
                     }
@@ -464,19 +460,6 @@ struct StudyModePicker: View {
                 }
 
                 Section("Options") {
-                    VStack(spacing: 4) {
-                        HStack {
-                            Text("Per Session")
-                                .font(.subheadline)
-                            Spacer()
-                            Text(sessionLimit == 0 ? "All" : "\(sessionLimit)")
-                                .font(.subheadline.monospacedDigit())
-                                .foregroundStyle(.indigo)
-                        }
-                        Slider(value: $sessionLimitValue, in: 0...Double(min(rangedCards.count, 100)), step: 5)
-                            .tint(.indigo)
-                    }
-
                     Toggle("Reverse (English → Word)", isOn: $reverseMode)
                         .font(.subheadline)
                     Toggle("Type Answer", isOn: $typingMode)
