@@ -123,7 +123,6 @@ final class StudySession {
 
 struct StudySessionView: View {
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("autoPronouncEnabled") private var autoPronounce = false
     @State private var session: StudySession
     @State private var showingReStudy = false
     @State private var dragOffset: CGFloat = 0
@@ -167,20 +166,6 @@ struct StudySessionView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button("Quit") { dismiss() }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    autoPronounce.toggle()
-                } label: {
-                    Image(systemName: autoPronounce ? "speaker.wave.2.fill" : "speaker.slash")
-                        .foregroundStyle(autoPronounce ? .indigo : .secondary)
-                }
-            }
-        }
-        .onChange(of: session.isFlipped) {
-            if session.isFlipped && autoPronounce {
-                let lang = session.reverseMode ? session.languageCode : "en-US"
-                SpeechHelper.shared.speak(session.displayBack, languageCode: lang)
             }
         }
     }
