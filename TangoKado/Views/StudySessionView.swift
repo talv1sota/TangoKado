@@ -358,7 +358,7 @@ struct StudySessionView: View {
                     Label("\(session.correctCount)", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                     Label("\(session.incorrectCount)", systemImage: "xmark.circle.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.red)
                 }
                 .font(.subheadline)
             }
@@ -476,7 +476,7 @@ struct StudySessionView: View {
                     } label: {
                         Label("Reveal", systemImage: "eye")
                             .font(.subheadline)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.red)
                     }
                     Button {
                         session.typingNextCard()
@@ -555,7 +555,7 @@ struct StudySessionView: View {
                         Text(session.typedAnswer)
                             .font(.body)
                             .strikethrough()
-                            .foregroundStyle(.orange.opacity(0.7))
+                            .foregroundStyle(.red.opacity(0.7))
                     }
                     Text(session.displayBack)
                         .font(.title3.bold())
@@ -566,7 +566,7 @@ struct StudySessionView: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(session.answerCorrect ? Color.green.opacity(0.08) : Color.orange.opacity(0.08))
+                    .fill(session.answerCorrect ? Color.green.opacity(0.08) : Color.red.opacity(0.08))
             )
             .padding(.horizontal, 24)
 
@@ -627,7 +627,7 @@ struct StudySessionView: View {
                     Text("Don't Know")
                         .font(.caption2)
                 }
-                .foregroundStyle(.orange)
+                .foregroundStyle(.red)
                 .frame(maxWidth: .infinity)
             }
 
@@ -659,7 +659,7 @@ struct StudySessionView: View {
                 }
 
                 if !session.incorrectCards.isEmpty {
-                    resultsSection(title: "Incorrect", icon: "xmark.circle.fill", color: .orange, cards: session.incorrectCards)
+                    resultsSection(title: "Incorrect", icon: "xmark.circle.fill", color: .red, cards: session.incorrectCards)
                 }
 
                 if !session.correctCards.isEmpty {
@@ -727,7 +727,7 @@ struct StudySessionView: View {
         VStack(spacing: 12) {
             ResultRow(label: "Total", value: "\(session.shuffledCards.count) cards", color: .primary)
             ResultRow(label: "Correct", value: "\(session.correctCount)", color: .green)
-            ResultRow(label: "Incorrect", value: "\(session.incorrectCount)", color: .orange)
+            ResultRow(label: "Incorrect", value: "\(session.incorrectCount)", color: .red)
             ResultRow(label: "Accuracy", value: "\(session.percentage)%", color: .indigo)
         }
         .padding()
@@ -743,8 +743,8 @@ struct StudySessionView: View {
             .font(.headline)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(.orange.opacity(0.12))
-            .foregroundStyle(.orange)
+            .background(.red.opacity(0.12))
+            .foregroundStyle(.red)
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
     }
