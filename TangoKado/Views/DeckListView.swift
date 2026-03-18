@@ -446,29 +446,27 @@ struct StudyModePicker: View {
                 }
 
                 Section {
-                    startButton(title: "Start All Cards", count: rangedCards.count) {
+                    startButton(title: "All Cards", count: rangedCards.count) {
                         onSelect(applyLimit(rangedCards), reverseMode, typingMode)
                     }
                     let weak = rangedCards.filter { $0.masteryStatus == .struggling }
                     if !weak.isEmpty {
-                        startButton(title: "Start Incorrect Only", count: weak.count) {
+                        startButton(title: "Incorrect Cards", count: weak.count) {
                             onSelect(applyLimit(weak), reverseMode, typingMode)
                         }
                     }
                     let mastered = rangedCards.filter { $0.masteryStatus == .mastered }
                     if !mastered.isEmpty {
-                        startButton(title: "Start Correct Only", count: mastered.count) {
+                        startButton(title: "Correct Cards", count: mastered.count) {
                             onSelect(applyLimit(mastered), reverseMode, typingMode)
                         }
                     }
                     let unseen = rangedCards.filter { $0.masteryStatus == .unseen }
                     if !unseen.isEmpty {
-                        startButton(title: "Start Skipped Only", count: unseen.count) {
+                        startButton(title: "Skipped Cards", count: unseen.count) {
                             onSelect(applyLimit(unseen), reverseMode, typingMode)
                         }
                     }
-                } header: {
-                    Text("Go")
                 }
             }
             .listStyle(.insetGrouped)
