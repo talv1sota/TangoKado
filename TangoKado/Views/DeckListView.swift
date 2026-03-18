@@ -399,13 +399,20 @@ struct ProgressDashboard: View {
 
 // MARK: - Study Mode Picker
 
+enum CardSet: String, CaseIterable {
+    case all = "All"
+    case incorrect = "Incorrect"
+    case correct = "Correct"
+    case skipped = "Skipped"
+}
+
 struct StudyModePicker: View {
     let deck: Deck
     let onSelect: ([Flashcard]?, Bool, Bool) -> Void
     @State private var wordRangeValue: Double = 0
-    @State private var sessionLimitValue: Double = 0
     @State private var reverseMode = false
     @State private var typingMode = false
+    @State private var selectedSet: CardSet = .all
 
     private var maxCards: Int { deck.cards.count }
 
@@ -414,12 +421,17 @@ struct StudyModePicker: View {
         return v == 0 ? maxCards : v
     }
 
-    private var sessionLimit: Int {
-        Int(sessionLimitValue)
+    private var rangedCards: [Flashcard] {
+        Array(deck.cards).filter { $0.rank <= wordRange }
     }
 
-    private var rangedCards: [Flashcard] {
-        return Array(deck.cards).filter { $0.rank <= wordRange }
+    private var selectedCards: [Flashcard] {
+        switch selectedSet {
+        case .all: return rangedCards
+        case .incorrect: return rangedCards.filter { $0.masteryStatus == .struggling }
+        case .correct: return rangedCards.filter { $0.masteryStatus == .mastered }
+        case .skipped: return rangedCards.filter { $0.masteryStatus == .unseen }
+        }
     }
 
     var body: some View {
@@ -440,6 +452,15 @@ struct StudyModePicker: View {
                     }
                 }
 
+                Section("Cards") {
+                    Picker("Study", selection: $selectedSet) {
+                        ForEach(CardSet.allCases, id: \.self) { set in
+                            Text(set.rawValue).tag(set)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
                 Section("Options") {
                     Toggle("Reverse (English → Word)", isOn: $reverseMode)
                         .font(.subheadline)
@@ -448,62 +469,24 @@ struct StudyModePicker: View {
                 }
 
                 Section {
-                    startButton(title: "All Cards", count: rangedCards.count) {
-                        onSelect(applyLimit(rangedCards), reverseMode, typingMode)
-                    }
-                    let weak = rangedCards.filter { $0.masteryStatus == .struggling }
-                    if !weak.isEmpty {
-                        startButton(title: "Incorrect Cards", count: weak.count) {
-                            onSelect(applyLimit(weak), reverseMode, typingMode)
+                    Button {
+                        onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode)
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Start (\(selectedCards.count) cards)")
+                                .font(.headline)
+                            Spacer()
                         }
+                        .padding(.vertical, 6)
                     }
-                    let mastered = rangedCards.filter { $0.masteryStatus == .mastered }
-                    if !mastered.isEmpty {
-                        startButton(title: "Correct Cards", count: mastered.count) {
-                            onSelect(applyLimit(mastered), reverseMode, typingMode)
-                        }
-                    }
-                    let unseen = rangedCards.filter { $0.masteryStatus == .unseen }
-                    if !unseen.isEmpty {
-                        startButton(title: "Skipped Cards", count: unseen.count) {
-                            onSelect(applyLimit(unseen), reverseMode, typingMode)
-                        }
-                    }
+                    .disabled(selectedCards.isEmpty)
                 }
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Study Mode")
             .navigationBarTitleDisplayMode(.inline)
         }
-    }
-
-    private func applyLimit(_ cards: [Flashcard]) -> [Flashcard]? {
-        guard sessionLimit > 0 else { return cards }
-        return Array(cards.prefix(sessionLimit))
-    }
-
-    private func startButton(title: String, count: Int, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: "play.fill")
-                    .font(.caption)
-                    .foregroundStyle(.white)
-                    .frame(width: 24, height: 24)
-                    .background(.indigo, in: RoundedRectangle(cornerRadius: 6))
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text("\(count)")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.vertical, 4)
-        }
-        .buttonStyle(.plain)
     }
 }
 
