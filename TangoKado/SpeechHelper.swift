@@ -10,7 +10,7 @@ final class SpeechHelper: NSObject, AVSpeechSynthesizerDelegate {
 
     // Languages with native non-Latin voices that can read their own script
     // For these, we strip the parenthetical romanization
-    private let nativeScriptLanguages: Set<String> = ["ru-RU", "ja-JP"]
+    private let nativeScriptLanguages: Set<String> = ["ru-RU", "ja-JP", "ko-KR", "zh-CN", "ar-SA"]
 
     override init() {
         super.init()

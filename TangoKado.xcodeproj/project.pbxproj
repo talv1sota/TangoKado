@@ -29,6 +29,14 @@
 		E10000010000000000000020 /* LanguageRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000020 /* LanguageRegistry.swift */; };
 		E10000010000000000000021 /* AddLanguageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000021 /* AddLanguageView.swift */; };
 		E10000010000000000000022 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000022 /* WelcomeView.swift */; };
+		E10000010000000000000023 /* SpanishWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000023 /* SpanishWords.swift */; };
+		E10000010000000000000024 /* FrenchWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000024 /* FrenchWords.swift */; };
+		E10000010000000000000025 /* PortugueseWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000025 /* PortugueseWords.swift */; };
+		E10000010000000000000026 /* KoreanWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000026 /* KoreanWords.swift */; };
+		E10000010000000000000027 /* ChineseWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000027 /* ChineseWords.swift */; };
+		E10000010000000000000028 /* TurkishWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000028 /* TurkishWords.swift */; };
+		E10000010000000000000029 /* PolishWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000029 /* PolishWords.swift */; };
+		E10000010000000000000030 /* ArabicWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000030 /* ArabicWords.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +62,14 @@
 		E10000020000000000000020 /* LanguageRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageRegistry.swift; sourceTree = "<group>"; };
 		E10000020000000000000021 /* AddLanguageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddLanguageView.swift; sourceTree = "<group>"; };
 		E10000020000000000000022 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		E10000020000000000000023 /* SpanishWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpanishWords.swift; sourceTree = "<group>"; };
+		E10000020000000000000024 /* FrenchWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrenchWords.swift; sourceTree = "<group>"; };
+		E10000020000000000000025 /* PortugueseWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortugueseWords.swift; sourceTree = "<group>"; };
+		E10000020000000000000026 /* KoreanWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoreanWords.swift; sourceTree = "<group>"; };
+		E10000020000000000000027 /* ChineseWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChineseWords.swift; sourceTree = "<group>"; };
+		E10000020000000000000028 /* TurkishWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurkishWords.swift; sourceTree = "<group>"; };
+		E10000020000000000000029 /* PolishWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolishWords.swift; sourceTree = "<group>"; };
+		E10000020000000000000030 /* ArabicWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArabicWords.swift; sourceTree = "<group>"; };
 		E10000030000000000000001 /* TangoKado.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TangoKado.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -125,6 +141,14 @@
 				E10000020000000000000017 /* GermanWords.swift */,
 				E10000020000000000000019 /* CroatianWords.swift */,
 				E10000020000000000000020 /* LanguageRegistry.swift */,
+				E10000020000000000000023 /* SpanishWords.swift */,
+				E10000020000000000000024 /* FrenchWords.swift */,
+				E10000020000000000000025 /* PortugueseWords.swift */,
+				E10000020000000000000026 /* KoreanWords.swift */,
+				E10000020000000000000027 /* ChineseWords.swift */,
+				E10000020000000000000028 /* TurkishWords.swift */,
+				E10000020000000000000029 /* PolishWords.swift */,
+				E10000020000000000000030 /* ArabicWords.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -236,6 +260,14 @@
 				E10000010000000000000020 /* LanguageRegistry.swift in Sources */,
 				E10000010000000000000021 /* AddLanguageView.swift in Sources */,
 				E10000010000000000000022 /* WelcomeView.swift in Sources */,
+				E10000010000000000000023 /* SpanishWords.swift in Sources */,
+				E10000010000000000000024 /* FrenchWords.swift in Sources */,
+				E10000010000000000000025 /* PortugueseWords.swift in Sources */,
+				E10000010000000000000026 /* KoreanWords.swift in Sources */,
+				E10000010000000000000027 /* ChineseWords.swift in Sources */,
+				E10000010000000000000028 /* TurkishWords.swift in Sources */,
+				E10000010000000000000029 /* PolishWords.swift in Sources */,
+				E10000010000000000000030 /* ArabicWords.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
