@@ -6,6 +6,7 @@ import SwiftData
 struct DeckListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Deck.createdAt, order: .reverse) private var decks: [Deck]
+    @AppStorage("appColorScheme") private var appColorScheme = 0
     @State private var showingAddLanguage = false
 
     var body: some View {
@@ -41,7 +42,8 @@ struct DeckListView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     streakBadge
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    appearanceButton
                     Button {
                         showingAddLanguage = true
                     } label: {
@@ -58,19 +60,30 @@ struct DeckListView: View {
 
     private var streakBadge: some View {
         let streak = UserDefaults.standard.integer(forKey: "currentStreak")
-        return HStack(spacing: 5) {
+        return HStack(spacing: 4) {
             Image(systemName: "flame.fill")
                 .foregroundStyle(streak > 0 ? .orange : .secondary)
             Text("\(streak)")
                 .font(.subheadline.bold().monospacedDigit())
                 .foregroundStyle(streak > 0 ? .primary : .secondary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(
-            Capsule()
-                .fill(streak > 0 ? Color.orange.opacity(0.12) : Color(.systemGray5))
-        )
+    }
+
+    private var appearanceButton: some View {
+        Menu {
+            Button { appColorScheme = 0 } label: {
+                Label("System", systemImage: appColorScheme == 0 ? "checkmark" : "")
+            }
+            Button { appColorScheme = 1 } label: {
+                Label("Light", systemImage: appColorScheme == 1 ? "checkmark" : "")
+            }
+            Button { appColorScheme = 2 } label: {
+                Label("Dark", systemImage: appColorScheme == 2 ? "checkmark" : "")
+            }
+        } label: {
+            Image(systemName: appColorScheme == 1 ? "sun.max.fill" : appColorScheme == 2 ? "moon.fill" : "circle.lefthalf.filled")
+                .font(.body)
+        }
     }
 
     private var emptyStateView: some View {
