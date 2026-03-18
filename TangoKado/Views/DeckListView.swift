@@ -61,20 +61,13 @@ struct DeckListView: View {
 
     private var streakBadge: some View {
         let streak = UserDefaults.standard.integer(forKey: "currentStreak")
-        return HStack(spacing: 3) {
+        return HStack(spacing: 4) {
             Image(systemName: "flame.fill")
-                .font(.caption)
                 .foregroundStyle(streak > 0 ? .orange : .secondary)
             Text("\(streak)")
-                .font(.caption.bold().monospacedDigit())
+                .font(.subheadline.bold().monospacedDigit())
                 .foregroundStyle(streak > 0 ? .primary : .secondary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-        .background(
-            Capsule()
-                .fill(streak > 0 ? Color.orange.opacity(0.12) : Color(.systemGray5))
-        )
     }
 
     private var appearanceButton: some View {
