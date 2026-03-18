@@ -430,35 +430,37 @@ struct StudyModePicker: View {
                     }
                 }
 
-                Section("Study") {
-                    studyRow(icon: "play.fill", title: "All Cards", count: rangedCards.count, color: .indigo) {
-                        onSelect(applyLimit(rangedCards), reverseMode, typingMode)
-                    }
-                    let weak = rangedCards.filter { $0.masteryStatus == .struggling }
-                    if !weak.isEmpty {
-                        studyRow(icon: "xmark.circle", title: "Incorrect", count: weak.count, color: .orange) {
-                            onSelect(applyLimit(weak), reverseMode, typingMode)
-                        }
-                    }
-                    let mastered = rangedCards.filter { $0.masteryStatus == .mastered }
-                    if !mastered.isEmpty {
-                        studyRow(icon: "checkmark.circle", title: "Correct", count: mastered.count, color: .green) {
-                            onSelect(applyLimit(mastered), reverseMode, typingMode)
-                        }
-                    }
-                    let unseen = rangedCards.filter { $0.masteryStatus == .unseen }
-                    if !unseen.isEmpty {
-                        studyRow(icon: "circle.dotted", title: "Skipped", count: unseen.count, color: .secondary) {
-                            onSelect(applyLimit(unseen), reverseMode, typingMode)
-                        }
-                    }
-                }
-
                 Section("Options") {
                     Toggle("Reverse (English → Word)", isOn: $reverseMode)
                         .font(.subheadline)
                     Toggle("Type Answer", isOn: $typingMode)
                         .font(.subheadline)
+                }
+
+                Section {
+                    startButton(title: "Start All Cards", count: rangedCards.count) {
+                        onSelect(applyLimit(rangedCards), reverseMode, typingMode)
+                    }
+                    let weak = rangedCards.filter { $0.masteryStatus == .struggling }
+                    if !weak.isEmpty {
+                        startButton(title: "Start Incorrect Only", count: weak.count) {
+                            onSelect(applyLimit(weak), reverseMode, typingMode)
+                        }
+                    }
+                    let mastered = rangedCards.filter { $0.masteryStatus == .mastered }
+                    if !mastered.isEmpty {
+                        startButton(title: "Start Correct Only", count: mastered.count) {
+                            onSelect(applyLimit(mastered), reverseMode, typingMode)
+                        }
+                    }
+                    let unseen = rangedCards.filter { $0.masteryStatus == .unseen }
+                    if !unseen.isEmpty {
+                        startButton(title: "Start Skipped Only", count: unseen.count) {
+                            onSelect(applyLimit(unseen), reverseMode, typingMode)
+                        }
+                    }
+                } header: {
+                    Text("Go")
                 }
             }
             .listStyle(.insetGrouped)
@@ -472,20 +474,26 @@ struct StudyModePicker: View {
         return Array(cards.prefix(sessionLimit))
     }
 
-    private func studyRow(icon: String, title: String, count: Int, color: Color, action: @escaping () -> Void) -> some View {
+    private func startButton(title: String, count: Int, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                    .frame(width: 24)
+                Image(systemName: "play.fill")
+                    .font(.caption)
+                    .foregroundStyle(.white)
+                    .frame(width: 24, height: 24)
+                    .background(.indigo, in: RoundedRectangle(cornerRadius: 6))
                 Text(title)
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
                 Spacer()
                 Text("\(count)")
+                    .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
     }
