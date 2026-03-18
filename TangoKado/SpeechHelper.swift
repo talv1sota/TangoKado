@@ -6,7 +6,7 @@ final class SpeechHelper: NSObject, AVSpeechSynthesizerDelegate {
 
     // Languages where the voice uses Latin script but words are written in non-Latin
     // For these, we extract the romanization from parentheses to speak
-    private let latinVoiceLanguages: Set<String> = ["hr-HR"]
+    private let latinVoiceLanguages: Set<String> = []
 
     // Languages with native non-Latin voices that can read their own script
     // For these, we strip the parenthetical romanization
