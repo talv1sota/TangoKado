@@ -242,7 +242,10 @@ struct DeckDetailView: View {
 
     private var studySection: some View {
         Section {
-            Button { showingStudyPicker = true } label: {
+            // Quick Start — one tap, all cards shuffled
+            Button {
+                activeStudyConfig = StudyConfig(cards: nil, reverseMode: false, typingMode: false, shuffleMode: true)
+            } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "play.fill")
                         .font(.title2)
@@ -258,8 +261,22 @@ struct DeckDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
+                }
+                .padding(.vertical, 4)
+            }
+            .buttonStyle(.plain)
+
+            // Options — opens study picker sheet
+            Button { showingStudyPicker = true } label: {
+                HStack {
+                    Image(systemName: "slider.horizontal.3")
+                        .foregroundStyle(.indigo)
+                    Text("Study Options")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
                 .padding(.vertical, 4)
@@ -480,25 +497,6 @@ struct StudyModePicker: View {
                 }
 
                 Section {
-                    // Quick Start
-                    Button {
-                        onSelect(nil, false, false, true)
-                    } label: {
-                        HStack {
-                            Image(systemName: "bolt.fill")
-                                .foregroundStyle(.yellow)
-                            Text("Quick Start")
-                                .font(.headline)
-                            Spacer()
-                            Text("All · Shuffled")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .buttonStyle(.plain)
-
-                    // Custom Start
                     Button {
                         onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
                     } label: {
