@@ -12,7 +12,7 @@ struct StudySessionView: View {
     @State private var showingResults = false
     @State private var shuffledCards: [Flashcard]
     @State private var dragOffset: CGSize = .zero
-    @State private var history: [Int] = []
+    @State private var history: [(index: Int, wasCorrect: Bool)] = []
 
     init(deck: Deck) {
         self.deck = deck
@@ -202,7 +202,7 @@ struct StudySessionView: View {
         card.correctCount += 1
         card.lastReviewedAt = Date()
         correctCount += 1
-        history.append(currentIndex)
+        history.append((index: currentIndex, wasCorrect: true))
         nextCard()
     }
 
@@ -211,7 +211,7 @@ struct StudySessionView: View {
         card.incorrectCount += 1
         card.lastReviewedAt = Date()
         incorrectCount += 1
-        history.append(currentIndex)
+        history.append((index: currentIndex, wasCorrect: false))
         nextCard()
     }
 
@@ -232,28 +232,19 @@ struct StudySessionView: View {
     }
 
     private func goBack() {
-        guard let previousIndex = history.popLast() else { return }
+        guard let entry = history.popLast() else { return }
 
-        // Undo the score from the card we're going back to
-        let card = shuffledCards[previousIndex]
-        if card.correctCount > 0, correctCount > 0 {
-            // Check if last action was correct or incorrect
-            // We can't know for sure, so just decrement the most recent
-        }
-        // Simple approach: decrement totals
-        let totalAnswered = correctCount + incorrectCount
-        if totalAnswered > 0 {
-            if card.correctCount > 0 && card.lastReviewedAt != nil {
-                card.correctCount -= 1
-                correctCount -= 1
-            } else if card.incorrectCount > 0 {
-                card.incorrectCount -= 1
-                incorrectCount -= 1
-            }
+        let card = shuffledCards[entry.index]
+        if entry.wasCorrect {
+            card.correctCount = max(0, card.correctCount - 1)
+            correctCount = max(0, correctCount - 1)
+        } else {
+            card.incorrectCount = max(0, card.incorrectCount - 1)
+            incorrectCount = max(0, incorrectCount - 1)
         }
 
         withAnimation {
-            currentIndex = previousIndex
+            currentIndex = entry.index
             isFlipped = false
             cardRotation = 0
         }
