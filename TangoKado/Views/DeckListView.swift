@@ -128,6 +128,12 @@ struct DeckRow: View {
 
 // MARK: - Deck Detail View
 
+struct StudyConfig: Identifiable {
+    let id = UUID()
+    let cards: [Flashcard]?
+    let reverseMode: Bool
+}
+
 enum CardFilter: String, CaseIterable {
     case all = "All"
     case mastered = "Mastered"
@@ -140,14 +146,12 @@ struct DeckDetailView: View {
     @Environment(\.dismiss) private var dismiss
     var deck: Deck
     @State private var showingAddCard = false
-    @State private var showingStudySession = false
     @State private var showingStudyPicker = false
-    @State private var launchStudyOnDismiss = false
+    @State private var pendingStudyConfig: StudyConfig? = nil
+    @State private var activeStudyConfig: StudyConfig? = nil
     @State private var showingResetConfirm = false
     @State private var showingDeleteConfirm = false
     @State private var selectedFilter: CardFilter = .all
-    @State private var studyCards: [Flashcard]? = nil
-    @State private var reverseMode = false
     @State private var searchText = ""
 
     var body: some View {
@@ -197,21 +201,19 @@ struct DeckDetailView: View {
             AddCardView(deck: deck)
         }
         .sheet(isPresented: $showingStudyPicker, onDismiss: {
-            if launchStudyOnDismiss {
-                launchStudyOnDismiss = false
-                showingStudySession = true
+            if let config = pendingStudyConfig {
+                pendingStudyConfig = nil
+                activeStudyConfig = config
             }
         }) {
             StudyModePicker(deck: deck) { cards, reverse in
-                studyCards = cards
-                reverseMode = reverse
-                launchStudyOnDismiss = true
+                pendingStudyConfig = StudyConfig(cards: cards, reverseMode: reverse)
                 showingStudyPicker = false
             }
             .presentationDetents([.medium])
         }
-        .fullScreenCover(isPresented: $showingStudySession) {
-            StudySessionView(deck: deck, specificCards: studyCards, reverseMode: reverseMode)
+        .fullScreenCover(item: $activeStudyConfig) { config in
+            StudySessionView(deck: deck, specificCards: config.cards, reverseMode: config.reverseMode)
         }
     }
 
