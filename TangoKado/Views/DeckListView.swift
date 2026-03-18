@@ -70,16 +70,8 @@ struct DeckListView: View {
     }
 
     private var appearanceButton: some View {
-        Menu {
-            Button { appColorScheme = 0 } label: {
-                Label("System", systemImage: appColorScheme == 0 ? "checkmark" : "")
-            }
-            Button { appColorScheme = 1 } label: {
-                Label("Light", systemImage: appColorScheme == 1 ? "checkmark" : "")
-            }
-            Button { appColorScheme = 2 } label: {
-                Label("Dark", systemImage: appColorScheme == 2 ? "checkmark" : "")
-            }
+        Button {
+            appColorScheme = (appColorScheme + 1) % 3
         } label: {
             Image(systemName: appColorScheme == 1 ? "sun.max.fill" : appColorScheme == 2 ? "moon.fill" : "circle.lefthalf.filled")
                 .font(.body)
