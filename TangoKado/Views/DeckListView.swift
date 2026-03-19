@@ -469,8 +469,8 @@ struct DeckDetailView: View {
 
 struct ProgressDashboard: View {
     let deck: Deck
-    @State private var showFlashcards = false
-    @State private var showTyping = false
+    @State private var showFlashcards = true
+    @State private var showTyping = true
 
     var body: some View {
         VStack(spacing: 8) {
@@ -603,11 +603,9 @@ struct StudyModePicker: View {
 
                 // Save button pinned at bottom
                 VStack(spacing: 8) {
-                    if hasActiveSession {
-                        Text("Changes apply to your next session")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(hasActiveSession ? "⚠ Changes apply to your next session" : "Settings apply to Flashcards and Typing")
+                        .font(.caption)
+                        .foregroundStyle(hasActiveSession ? .orange : .secondary)
                     Button {
                         onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
                     } label: {
