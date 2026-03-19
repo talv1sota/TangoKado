@@ -123,15 +123,9 @@ struct DeckRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(deck.name)
                     .font(.headline)
-                HStack(spacing: 10) {
-                    Label("\(deck.cards.count) words", systemImage: "rectangle.stack.fill")
-                    if deck.masteredCards.count > 0 {
-                        Label("\(deck.masteredCards.count) known", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text("\(deck.cards.count) words")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 4)
