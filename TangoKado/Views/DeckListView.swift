@@ -402,7 +402,7 @@ struct DeckDetailView: View {
                     Text("\(deck.typingCorrect)")
                         .font(.title3.bold().monospacedDigit())
                         .foregroundStyle(.green)
-                    Text("Know")
+                    Text("Correct")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -411,7 +411,7 @@ struct DeckDetailView: View {
                     Text("\(deck.typingIncorrect)")
                         .font(.title3.bold().monospacedDigit())
                         .foregroundStyle(.red)
-                    Text("Don't Know")
+                    Text("Incorrect")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
