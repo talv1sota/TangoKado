@@ -361,64 +361,64 @@ struct DeckDetailView: View {
 
     // MARK: Progress Section
 
-    @State private var showFlashcardStats = true
-    @State private var showTypingStats = true
     @State private var showResetFlashcardConfirm = false
     @State private var showResetTypingConfirm = false
 
     private var flashcardProgressSection: some View {
         Section {
-            DisclosureGroup("Flashcard Progress", isExpanded: $showFlashcardStats) {
-                HStack(spacing: 16) {
-                    progressStat(count: deck.flashcardCorrect, label: "Know", color: .green)
-                    progressStat(count: deck.flashcardIncorrect, label: "Don't Know", color: .red)
-                    progressStat(count: deck.cards.count - deck.flashcardStudied, label: "New", color: .secondary)
-                }
-                .padding(.top, 4)
-
+            HStack {
+                Text("Flashcards")
+                    .font(.subheadline.weight(.medium))
+                Spacer()
                 if deck.flashcardStudied > 0 {
-                    Button(role: .destructive) {
-                        showResetFlashcardConfirm = true
-                    } label: {
-                        Label("Reset Flashcard Progress", systemImage: "arrow.counterclockwise")
+                    Button { showResetFlashcardConfirm = true } label: {
+                        Image(systemName: "arrow.counterclockwise")
                             .font(.caption)
+                            .foregroundStyle(.red)
                     }
+                    .buttonStyle(.plain)
                 }
+            }
+            HStack(spacing: 16) {
+                progressStat(count: deck.flashcardCorrect, label: "Know", color: .green)
+                progressStat(count: deck.flashcardIncorrect, label: "Don't Know", color: .red)
+                progressStat(count: deck.cards.count - deck.flashcardStudied, label: "New", color: .secondary)
             }
         }
         .alert("Reset Flashcard Progress?", isPresented: $showResetFlashcardConfirm) {
             Button("Reset", role: .destructive) { resetFlashcardProgress() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This will clear all flashcard Know/Don't Know counts.")
+            Text("This will reset all flashcard counters and progress.")
         }
     }
 
     private var typingProgressSection: some View {
         Section {
-            DisclosureGroup("Typing Progress", isExpanded: $showTypingStats) {
-                HStack(spacing: 16) {
-                    progressStat(count: deck.typingCorrect, label: "Correct", color: .green)
-                    progressStat(count: deck.typingIncorrect, label: "Incorrect", color: .red)
-                    progressStat(count: deck.cards.count - deck.typingStudied, label: "New", color: .secondary)
-                }
-                .padding(.top, 4)
-
+            HStack {
+                Text("Typing")
+                    .font(.subheadline.weight(.medium))
+                Spacer()
                 if deck.typingStudied > 0 {
-                    Button(role: .destructive) {
-                        showResetTypingConfirm = true
-                    } label: {
-                        Label("Reset Typing Progress", systemImage: "arrow.counterclockwise")
+                    Button { showResetTypingConfirm = true } label: {
+                        Image(systemName: "arrow.counterclockwise")
                             .font(.caption)
+                            .foregroundStyle(.red)
                     }
+                    .buttonStyle(.plain)
                 }
+            }
+            HStack(spacing: 16) {
+                progressStat(count: deck.typingCorrect, label: "Correct", color: .green)
+                progressStat(count: deck.typingIncorrect, label: "Incorrect", color: .red)
+                progressStat(count: deck.cards.count - deck.typingStudied, label: "New", color: .secondary)
             }
         }
         .alert("Reset Typing Progress?", isPresented: $showResetTypingConfirm) {
             Button("Reset", role: .destructive) { resetTypingProgress() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This will clear all typing Correct/Incorrect counts.")
+            Text("This will reset all typing counters and progress.")
         }
     }
 
