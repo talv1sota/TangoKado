@@ -174,7 +174,8 @@ struct DeckDetailView: View {
         List {
             if !deck.cards.isEmpty {
                 studySection
-                progressSection
+                flashcardProgressSection
+                typingProgressSection
                 filterSection
             }
             cardsSection
@@ -360,9 +361,71 @@ struct DeckDetailView: View {
 
     // MARK: Progress Section
 
-    private var progressSection: some View {
-        Section {
-            ProgressDashboard(deck: deck)
+    private var flashcardProgressSection: some View {
+        Section("Flashcard Progress") {
+            HStack(spacing: 16) {
+                VStack(spacing: 2) {
+                    Text("\(deck.flashcardCorrect)")
+                        .font(.title3.bold().monospacedDigit())
+                        .foregroundStyle(.green)
+                    Text("Correct")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                VStack(spacing: 2) {
+                    Text("\(deck.flashcardIncorrect)")
+                        .font(.title3.bold().monospacedDigit())
+                        .foregroundStyle(.red)
+                    Text("Incorrect")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                VStack(spacing: 2) {
+                    Text("\(deck.cards.count - deck.flashcardStudied)")
+                        .font(.title3.bold().monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    Text("New")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var typingProgressSection: some View {
+        Section("Typing Progress") {
+            HStack(spacing: 16) {
+                VStack(spacing: 2) {
+                    Text("\(deck.typingCorrect)")
+                        .font(.title3.bold().monospacedDigit())
+                        .foregroundStyle(.green)
+                    Text("Correct")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                VStack(spacing: 2) {
+                    Text("\(deck.typingIncorrect)")
+                        .font(.title3.bold().monospacedDigit())
+                        .foregroundStyle(.red)
+                    Text("Incorrect")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                VStack(spacing: 2) {
+                    Text("\(deck.cards.count - deck.typingStudied)")
+                        .font(.title3.bold().monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    Text("New")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+            }
         }
     }
 
@@ -463,56 +526,7 @@ struct DeckDetailView: View {
 
 // MARK: - Progress Dashboard
 
-struct ProgressDashboard: View {
-    let deck: Deck
-    @State private var showFlashcards = true
-    @State private var showTyping = true
-
-    var body: some View {
-        VStack(spacing: 8) {
-            // Flashcards
-            DisclosureGroup(isExpanded: $showFlashcards) {
-                HStack(spacing: 16) {
-                    statLabel(count: deck.flashcardCorrect, label: "Correct", color: .green)
-                    statLabel(count: deck.flashcardIncorrect, label: "Incorrect", color: .red)
-                    statLabel(count: deck.cards.count - deck.flashcardStudied, label: "New", color: .secondary)
-                }
-                .padding(.top, 4)
-            } label: {
-                Label("Flashcards", systemImage: "rectangle.portrait.on.rectangle.portrait")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.indigo)
-            }
-
-            // Typing
-            DisclosureGroup(isExpanded: $showTyping) {
-                HStack(spacing: 16) {
-                    statLabel(count: deck.typingCorrect, label: "Correct", color: .green)
-                    statLabel(count: deck.typingIncorrect, label: "Incorrect", color: .red)
-                    statLabel(count: deck.cards.count - deck.typingStudied, label: "New", color: .secondary)
-                }
-                .padding(.top, 4)
-            } label: {
-                Label("Typing", systemImage: "keyboard")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.blue)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private func statLabel(count: Int, label: String, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text("\(count)")
-                .font(.title3.bold().monospacedDigit())
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
+// ProgressDashboard removed — stats are now inline in separate sections
 
 // MARK: - Study Mode Picker
 
