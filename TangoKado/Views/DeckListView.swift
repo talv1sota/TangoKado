@@ -361,72 +361,77 @@ struct DeckDetailView: View {
 
     // MARK: Progress Section
 
+    @State private var showFlashcardStats = true
+    @State private var showTypingStats = true
+    @State private var showResetFlashcardConfirm = false
+    @State private var showResetTypingConfirm = false
+
     private var flashcardProgressSection: some View {
-        Section("Flashcard Progress") {
-            HStack(spacing: 16) {
-                VStack(spacing: 2) {
-                    Text("\(deck.flashcardCorrect)")
-                        .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(.green)
-                    Text("Know")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+        Section {
+            DisclosureGroup("Flashcard Progress", isExpanded: $showFlashcardStats) {
+                HStack(spacing: 16) {
+                    progressStat(count: deck.flashcardCorrect, label: "Know", color: .green)
+                    progressStat(count: deck.flashcardIncorrect, label: "Don't Know", color: .red)
+                    progressStat(count: deck.cards.count - deck.flashcardStudied, label: "New", color: .secondary)
                 }
-                .frame(maxWidth: .infinity)
-                VStack(spacing: 2) {
-                    Text("\(deck.flashcardIncorrect)")
-                        .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(.red)
-                    Text("Don't Know")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                .padding(.top, 4)
+
+                if deck.flashcardStudied > 0 {
+                    Button(role: .destructive) {
+                        showResetFlashcardConfirm = true
+                    } label: {
+                        Label("Reset Flashcard Progress", systemImage: "arrow.counterclockwise")
+                            .font(.caption)
+                    }
                 }
-                .frame(maxWidth: .infinity)
-                VStack(spacing: 2) {
-                    Text("\(deck.cards.count - deck.flashcardStudied)")
-                        .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    Text("New")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
             }
+        }
+        .alert("Reset Flashcard Progress?", isPresented: $showResetFlashcardConfirm) {
+            Button("Reset", role: .destructive) { resetFlashcardProgress() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will clear all flashcard Know/Don't Know counts.")
         }
     }
 
     private var typingProgressSection: some View {
-        Section("Typing Progress") {
-            HStack(spacing: 16) {
-                VStack(spacing: 2) {
-                    Text("\(deck.typingCorrect)")
-                        .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(.green)
-                    Text("Correct")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+        Section {
+            DisclosureGroup("Typing Progress", isExpanded: $showTypingStats) {
+                HStack(spacing: 16) {
+                    progressStat(count: deck.typingCorrect, label: "Correct", color: .green)
+                    progressStat(count: deck.typingIncorrect, label: "Incorrect", color: .red)
+                    progressStat(count: deck.cards.count - deck.typingStudied, label: "New", color: .secondary)
                 }
-                .frame(maxWidth: .infinity)
-                VStack(spacing: 2) {
-                    Text("\(deck.typingIncorrect)")
-                        .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(.red)
-                    Text("Incorrect")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                .padding(.top, 4)
+
+                if deck.typingStudied > 0 {
+                    Button(role: .destructive) {
+                        showResetTypingConfirm = true
+                    } label: {
+                        Label("Reset Typing Progress", systemImage: "arrow.counterclockwise")
+                            .font(.caption)
+                    }
                 }
-                .frame(maxWidth: .infinity)
-                VStack(spacing: 2) {
-                    Text("\(deck.cards.count - deck.typingStudied)")
-                        .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    Text("New")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
             }
         }
+        .alert("Reset Typing Progress?", isPresented: $showResetTypingConfirm) {
+            Button("Reset", role: .destructive) { resetTypingProgress() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will clear all typing Correct/Incorrect counts.")
+        }
+    }
+
+    private func progressStat(count: Int, label: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("\(count)")
+                .font(.title3.bold().monospacedDigit())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: Filter + Cards Section
@@ -546,6 +551,7 @@ struct StudyModePicker: View {
     @AppStorage("studyShuffle") private var shuffleMode = true
     @State private var wordRangeValue: Double = 0
     @State private var selectedSet: CardSet = .all
+    @State private var showingNextSessionAlert = false
 
     private var maxCards: Int { deck.cards.count }
 
@@ -613,21 +619,20 @@ struct StudyModePicker: View {
                 .listStyle(.insetGrouped)
 
                 // Save button pinned at bottom
-                VStack(spacing: 8) {
-                    Text(hasActiveSession ? "⚠ Changes apply to your next session" : "Settings apply to Flashcards and Typing")
-                        .font(.caption)
-                        .foregroundStyle(hasActiveSession ? .orange : .secondary)
-                    Button {
+                Button {
+                    if hasActiveSession {
+                        showingNextSessionAlert = true
+                    } else {
                         onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
-                    } label: {
-                        Text("Save & Apply")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(.indigo)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+                } label: {
+                    Text("Save & Apply")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(.indigo)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 16)
@@ -635,6 +640,14 @@ struct StudyModePicker: View {
             .navigationTitle("Study Mode")
             .onAppear { wordRangeValue = Double(wordRangeStored) }
             .onChange(of: wordRangeValue) { wordRangeStored = Int(wordRangeValue) }
+            .alert("Changes will apply to your next session", isPresented: $showingNextSessionAlert) {
+                Button("Save Anyway") {
+                    onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You have an active study session. These settings won't affect your current session.")
+            }
             .navigationBarTitleDisplayMode(.inline)
         }
     }
