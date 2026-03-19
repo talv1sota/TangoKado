@@ -35,7 +35,7 @@ struct DeckListView: View {
                 }
             }
             .navigationTitle("TangoKado")
-            .navigationBarTitleDisplayMode(decks.isEmpty ? .inline : .large)
+            .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: Deck.self) { deck in
                 DeckDetailView(deck: deck)
             }
@@ -187,19 +187,17 @@ struct DeckDetailView: View {
                     Button { showingAddCard = true } label: {
                         Label("Add Card", systemImage: "plus")
                     }
-                    Menu {
-                        Button(role: .destructive) { resetFlashcardProgress() } label: {
-                            Label("Reset Flashcards", systemImage: "rectangle.portrait.on.rectangle.portrait")
-                        }
-                        Button(role: .destructive) { resetTypingProgress() } label: {
-                            Label("Reset Typing", systemImage: "keyboard")
-                        }
-                        Button(role: .destructive) { showingResetConfirm = true } label: {
-                            Label("Reset All", systemImage: "arrow.counterclockwise")
-                        }
-                    } label: {
-                        Label("Reset Progress", systemImage: "arrow.counterclockwise")
+                    Divider()
+                    Button(role: .destructive) { resetFlashcardProgress() } label: {
+                        Label("Reset Flashcards", systemImage: "rectangle.portrait.on.rectangle.portrait")
                     }
+                    Button(role: .destructive) { resetTypingProgress() } label: {
+                        Label("Reset Typing", systemImage: "keyboard")
+                    }
+                    Button(role: .destructive) { showingResetConfirm = true } label: {
+                        Label("Reset All Progress", systemImage: "arrow.counterclockwise")
+                    }
+                    Divider()
                     Button(role: .destructive) { showingDeleteConfirm = true } label: {
                         Label("Remove Language", systemImage: "trash")
                     }
@@ -261,11 +259,11 @@ struct DeckDetailView: View {
                         .frame(width: 44, height: 44)
                         .background(.indigo.gradient, in: RoundedRectangle(cornerRadius: 10))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Flashcards")
+                        Text(savedFlashcardIndex != nil ? "Continue Flashcards" : "Flashcards")
                             .font(.headline)
                             .foregroundStyle(.primary)
                         if let idx = savedFlashcardIndex {
-                            Text("Continue from card \(idx + 1)")
+                            Text("Card \(idx + 1) of \(deck.cards.count)")
                                 .font(.caption)
                                 .foregroundStyle(.indigo)
                         } else {
@@ -282,6 +280,17 @@ struct DeckDetailView: View {
             }
             .buttonStyle(.plain)
 
+            if savedFlashcardIndex != nil {
+                Button {
+                    StudySession.clearSavedSession(for: deck.name, typingMode: false)
+                    activeStudyConfig = StudyConfig(cards: nil, reverseMode: reverseMode, typingMode: false, shuffleMode: shuffleMode)
+                } label: {
+                    Label("New Flashcard Session", systemImage: "arrow.counterclockwise")
+                        .font(.subheadline)
+                        .foregroundStyle(.indigo)
+                }
+            }
+
             // Type Answer
             Button {
                 activeStudyConfig = StudyConfig(cards: nil, reverseMode: reverseMode, typingMode: true, shuffleMode: shuffleMode)
@@ -293,11 +302,11 @@ struct DeckDetailView: View {
                         .frame(width: 44, height: 44)
                         .background(.blue.gradient, in: RoundedRectangle(cornerRadius: 10))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Type Answer")
+                        Text(savedTypingIndex != nil ? "Continue Typing" : "Type Answer")
                             .font(.headline)
                             .foregroundStyle(.primary)
                         if let idx = savedTypingIndex {
-                            Text("Continue from card \(idx + 1)")
+                            Text("Card \(idx + 1) of \(deck.cards.count)")
                                 .font(.caption)
                                 .foregroundStyle(.blue)
                         } else {
@@ -313,6 +322,17 @@ struct DeckDetailView: View {
                 .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
+
+            if savedTypingIndex != nil {
+                Button {
+                    StudySession.clearSavedSession(for: deck.name, typingMode: true)
+                    activeStudyConfig = StudyConfig(cards: nil, reverseMode: reverseMode, typingMode: true, shuffleMode: shuffleMode)
+                } label: {
+                    Label("New Typing Session", systemImage: "arrow.counterclockwise")
+                        .font(.subheadline)
+                        .foregroundStyle(.blue)
+                }
+            }
 
             // Study Options
             Button { showingStudyPicker = true } label: {
@@ -449,62 +469,52 @@ struct DeckDetailView: View {
 
 struct ProgressDashboard: View {
     let deck: Deck
+    @State private var showFlashcards = false
+    @State private var showTyping = false
 
     var body: some View {
-        VStack(spacing: 10) {
-            // Flashcard row
-            HStack(spacing: 6) {
-                Image(systemName: "rectangle.portrait.on.rectangle.portrait")
-                    .font(.caption2)
-                    .foregroundStyle(.indigo)
-                    .frame(width: 14)
-                Text("Flashcards")
-                    .font(.caption.weight(.medium))
-                Spacer()
-                Label("\(deck.flashcardCorrect)", systemImage: "checkmark")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.green)
-                Label("\(deck.flashcardIncorrect)", systemImage: "xmark")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.red)
-            }
-
-            // Typing row
-            HStack(spacing: 6) {
-                Image(systemName: "keyboard")
-                    .font(.caption2)
-                    .foregroundStyle(.blue)
-                    .frame(width: 14)
-                Text("Typing")
-                    .font(.caption.weight(.medium))
-                Spacer()
-                Label("\(deck.typingCorrect)", systemImage: "checkmark")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.green)
-                Label("\(deck.typingIncorrect)", systemImage: "xmark")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.red)
-            }
-
-            // Overall bar
-            GeometryReader { geo in
-                let total = max(deck.cards.count, 1)
-                let mW = CGFloat(deck.masteredCards.count) / CGFloat(total) * geo.size.width
-                let sW = CGFloat(deck.strugglingCards.count) / CGFloat(total) * geo.size.width
-                HStack(spacing: 2) {
-                    if deck.masteredCards.count > 0 {
-                        RoundedRectangle(cornerRadius: 4).fill(.green).frame(width: max(mW, 2))
-                    }
-                    if deck.strugglingCards.count > 0 {
-                        RoundedRectangle(cornerRadius: 4).fill(.red).frame(width: max(sW, 2))
-                    }
-                    RoundedRectangle(cornerRadius: 4).fill(Color(.systemGray4))
+        VStack(spacing: 8) {
+            // Flashcards
+            DisclosureGroup(isExpanded: $showFlashcards) {
+                HStack(spacing: 16) {
+                    statLabel(count: deck.flashcardCorrect, label: "Correct", color: .green)
+                    statLabel(count: deck.flashcardIncorrect, label: "Incorrect", color: .red)
+                    statLabel(count: deck.cards.count - deck.flashcardStudied, label: "New", color: .secondary)
                 }
+                .padding(.top, 4)
+            } label: {
+                Label("Flashcards", systemImage: "rectangle.portrait.on.rectangle.portrait")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.indigo)
             }
-            .frame(height: 6)
-            .clipShape(Capsule())
+
+            // Typing
+            DisclosureGroup(isExpanded: $showTyping) {
+                HStack(spacing: 16) {
+                    statLabel(count: deck.typingCorrect, label: "Correct", color: .green)
+                    statLabel(count: deck.typingIncorrect, label: "Incorrect", color: .red)
+                    statLabel(count: deck.cards.count - deck.typingStudied, label: "New", color: .secondary)
+                }
+                .padding(.top, 4)
+            } label: {
+                Label("Typing", systemImage: "keyboard")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.blue)
+            }
         }
         .padding(.vertical, 4)
+    }
+
+    private func statLabel(count: Int, label: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("\(count)")
+                .font(.title3.bold().monospacedDigit())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -531,6 +541,11 @@ struct StudyModePicker: View {
     private var wordRange: Int {
         let v = Int(wordRangeValue)
         return v == 0 ? maxCards : v
+    }
+
+    private var hasActiveSession: Bool {
+        StudySession.savedIndex(for: deck.name, typingMode: false) != nil ||
+        StudySession.savedIndex(for: deck.name, typingMode: true) != nil
     }
 
     private var rangedCards: [Flashcard] {
@@ -587,16 +602,23 @@ struct StudyModePicker: View {
                 .listStyle(.insetGrouped)
 
                 // Save button pinned at bottom
-                Button {
-                    onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
-                } label: {
-                    Text("Save & Apply")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(.indigo)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                VStack(spacing: 8) {
+                    if hasActiveSession {
+                        Text("Changes apply to your next session")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Button {
+                        onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
+                    } label: {
+                        Text("Save & Apply")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(.indigo)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 16)
