@@ -150,8 +150,8 @@ struct StudyConfig: Identifiable {
 
 enum CardFilter: String, CaseIterable {
     case all = "All"
-    case mastered = "Correct"
-    case struggling = "Incorrect"
+    case mastered = "Know"
+    case struggling = "Don't Know"
     case unseen = "New"
 }
 
@@ -160,6 +160,7 @@ struct DeckDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("studyReverse") private var reverseMode = false
     @AppStorage("studyShuffle") private var shuffleMode = true
+    @AppStorage("studyWordRange") private var wordRangeStored: Int = 0
     var deck: Deck
     @State private var showingAddCard = false
     @State private var showingStudyPicker = false
@@ -239,6 +240,11 @@ struct DeckDetailView: View {
 
     // MARK: Study Section
 
+    private var studyCards: [Flashcard]? {
+        guard wordRangeStored > 0, wordRangeStored < deck.cards.count else { return nil }
+        return Array(deck.cards).filter { $0.rank <= wordRangeStored }
+    }
+
     private var savedFlashcardIndex: Int? {
         StudySession.savedIndex(for: deck.name, typingMode: false)
     }
@@ -251,7 +257,7 @@ struct DeckDetailView: View {
         Section {
             // Flashcards
             Button {
-                activeStudyConfig = StudyConfig(cards: nil, reverseMode: reverseMode, typingMode: false, shuffleMode: shuffleMode)
+                activeStudyConfig = StudyConfig(cards: studyCards, reverseMode: reverseMode, typingMode: false, shuffleMode: shuffleMode)
             } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "rectangle.portrait.on.rectangle.portrait.fill")
@@ -292,7 +298,7 @@ struct DeckDetailView: View {
 
             // Type Answer
             Button {
-                activeStudyConfig = StudyConfig(cards: nil, reverseMode: reverseMode, typingMode: true, shuffleMode: shuffleMode)
+                activeStudyConfig = StudyConfig(cards: studyCards, reverseMode: reverseMode, typingMode: true, shuffleMode: shuffleMode)
             } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "keyboard.fill")
@@ -368,7 +374,7 @@ struct DeckDetailView: View {
                     Text("\(deck.flashcardCorrect)")
                         .font(.title3.bold().monospacedDigit())
                         .foregroundStyle(.green)
-                    Text("Correct")
+                    Text("Know")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -377,7 +383,7 @@ struct DeckDetailView: View {
                     Text("\(deck.flashcardIncorrect)")
                         .font(.title3.bold().monospacedDigit())
                         .foregroundStyle(.red)
-                    Text("Incorrect")
+                    Text("Don't Know")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -402,7 +408,7 @@ struct DeckDetailView: View {
                     Text("\(deck.typingCorrect)")
                         .font(.title3.bold().monospacedDigit())
                         .foregroundStyle(.green)
-                    Text("Correct")
+                    Text("Know")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -411,7 +417,7 @@ struct DeckDetailView: View {
                     Text("\(deck.typingIncorrect)")
                         .font(.title3.bold().monospacedDigit())
                         .foregroundStyle(.red)
-                    Text("Incorrect")
+                    Text("Don't Know")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -532,18 +538,19 @@ struct DeckDetailView: View {
 
 enum CardSet: String, CaseIterable {
     case all = "All"
-    case incorrect = "Incorrect"
-    case correct = "Correct"
+    case incorrect = "Don't Know"
+    case correct = "Know"
     case skipped = "New"
 }
 
 struct StudyModePicker: View {
     let deck: Deck
     let onSelect: ([Flashcard]?, Bool, Bool, Bool) -> Void
-    @State private var wordRangeValue: Double = 0
+    @AppStorage("studyWordRange") private var wordRangeStored: Int = 0
     @AppStorage("studyReverse") private var reverseMode = false
     @AppStorage("studyTyping") private var typingMode = false
     @AppStorage("studyShuffle") private var shuffleMode = true
+    @State private var wordRangeValue: Double = 0
     @State private var selectedSet: CardSet = .all
 
     private var maxCards: Int { deck.cards.count }
@@ -632,6 +639,8 @@ struct StudyModePicker: View {
                 .padding(.bottom, 16)
             }
             .navigationTitle("Study Mode")
+            .onAppear { wordRangeValue = Double(wordRangeStored) }
+            .onChange(of: wordRangeValue) { wordRangeStored = Int(wordRangeValue) }
             .navigationBarTitleDisplayMode(.inline)
         }
     }
