@@ -279,15 +279,13 @@ struct DeckDetailView: View {
                 .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
-
-            if savedFlashcardIndex != nil {
-                Button {
-                    StudySession.clearSavedSession(for: deck.name, typingMode: false)
-                    activeStudyConfig = StudyConfig(cards: nil, reverseMode: reverseMode, typingMode: false, shuffleMode: shuffleMode)
-                } label: {
-                    Label("New Flashcard Session", systemImage: "arrow.counterclockwise")
-                        .font(.subheadline)
-                        .foregroundStyle(.indigo)
+            .contextMenu {
+                if savedFlashcardIndex != nil {
+                    Button {
+                        StudySession.clearSavedSession(for: deck.name, typingMode: false)
+                    } label: {
+                        Label("Reset Progress", systemImage: "arrow.counterclockwise")
+                    }
                 }
             }
 
@@ -322,15 +320,13 @@ struct DeckDetailView: View {
                 .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
-
-            if savedTypingIndex != nil {
-                Button {
-                    StudySession.clearSavedSession(for: deck.name, typingMode: true)
-                    activeStudyConfig = StudyConfig(cards: nil, reverseMode: reverseMode, typingMode: true, shuffleMode: shuffleMode)
-                } label: {
-                    Label("New Typing Session", systemImage: "arrow.counterclockwise")
-                        .font(.subheadline)
-                        .foregroundStyle(.blue)
+            .contextMenu {
+                if savedTypingIndex != nil {
+                    Button {
+                        StudySession.clearSavedSession(for: deck.name, typingMode: true)
+                    } label: {
+                        Label("Reset Progress", systemImage: "arrow.counterclockwise")
+                    }
                 }
             }
 
