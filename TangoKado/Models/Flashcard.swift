@@ -9,8 +9,8 @@ enum MasteryStatus: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .mastered: return "Correct"
-        case .struggling: return "Incorrect"
+        case .mastered: return "Mastered"
+        case .struggling: return "Weak"
         case .unseen: return "New"
         }
     }

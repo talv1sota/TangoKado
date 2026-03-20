@@ -8,6 +8,7 @@ struct DeckListView: View {
     @Query(sort: \Deck.createdAt, order: .reverse) private var decks: [Deck]
     @AppStorage("appColorScheme") private var appColorScheme = 0
     @State private var showingAddLanguage = false
+    @State private var deckToDelete: Deck?
 
     var body: some View {
         NavigationStack {
@@ -20,14 +21,13 @@ struct DeckListView: View {
                             NavigationLink(value: deck) {
                                 DeckRow(deck: deck)
                             }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    withAnimation {
-                                        modelContext.delete(deck)
-                                    }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    deckToDelete = deck
                                 } label: {
                                     Image(systemName: "trash")
                                 }
+                                .tint(.red)
                             }
                             .listRowSeparator(.hidden)
                         }
@@ -52,6 +52,20 @@ struct DeckListView: View {
                             .font(.title3)
                     }
                 }
+            }
+            .alert("Remove Language", isPresented: Binding(
+                get: { deckToDelete != nil },
+                set: { if !$0 { deckToDelete = nil } }
+            )) {
+                Button("Remove", role: .destructive) {
+                    if let deck = deckToDelete {
+                        withAnimation { modelContext.delete(deck) }
+                    }
+                    deckToDelete = nil
+                }
+                Button("Cancel", role: .cancel) { deckToDelete = nil }
+            } message: {
+                Text("Delete all cards and progress for \(deckToDelete?.name ?? "")?")
             }
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageView()
@@ -123,9 +137,6 @@ struct DeckRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(deck.name)
                     .font(.headline)
-                Text("\(deck.cards.count) words")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 4)
@@ -144,8 +155,8 @@ struct StudyConfig: Identifiable {
 
 enum CardFilter: String, CaseIterable {
     case all = "All"
-    case mastered = "Know"
-    case struggling = "Don't Know"
+    case mastered = "Mastered"
+    case struggling = "Weak"
     case unseen = "New"
 }
 
@@ -154,17 +165,21 @@ struct DeckDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("studyReverse") private var reverseMode = false
     @AppStorage("studyShuffle") private var shuffleMode = true
-    @AppStorage("studyWordRange") private var wordRangeStored: Int = 0
     var deck: Deck
     @State private var showingAddCard = false
     @State private var showingStudyPicker = false
     @State private var pendingStudyConfig: StudyConfig? = nil
     @State private var activeStudyConfig: StudyConfig? = nil
     @State private var showingResetConfirm = false
+    @State private var showingWordCountPicker = false
+    @State private var pendingTypingMode = false
+    @State private var customWordCount = ""
     @State private var showingDeleteConfirm = false
     @State private var selectedFilter: CardFilter = .all
     @State private var searchText = ""
-
+    @State private var refreshID = UUID()
+    @State private var sessionRecords: [SessionRecord] = []
+    @State private var isSessionActive = false
     var body: some View {
         List {
             if !deck.cards.isEmpty {
@@ -174,6 +189,7 @@ struct DeckDetailView: View {
                 filterSection
             }
             cardsSection
+            lastSessionSection
         }
         .searchable(text: $searchText, prompt: "Search words")
         .navigationTitle(deck.name)
@@ -184,10 +200,10 @@ struct DeckDetailView: View {
                         Label("Add Card", systemImage: "plus")
                     }
                     Divider()
-                    Button(role: .destructive) { resetFlashcardProgress() } label: {
+                    Button(role: .destructive) { showResetFlashcardConfirm = true } label: {
                         Label("Reset Flashcards", systemImage: "rectangle.portrait.on.rectangle.portrait")
                     }
-                    Button(role: .destructive) { resetTypingProgress() } label: {
+                    Button(role: .destructive) { showResetTypingConfirm = true } label: {
                         Label("Reset Typing", systemImage: "keyboard")
                     }
                     Button(role: .destructive) { showingResetConfirm = true } label: {
@@ -225,33 +241,132 @@ struct DeckDetailView: View {
                 // Settings saved via @AppStorage automatically
                 showingStudyPicker = false
             }
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.large])
         }
-        .fullScreenCover(item: $activeStudyConfig) { config in
-            StudySessionView(deck: deck, specificCards: config.cards, reverseMode: config.reverseMode, typingMode: config.typingMode, shuffleMode: config.shuffleMode)
+        .onAppear {
+            reloadSavedIndices()
+            sessionRecords = SessionHistory.records(for: deck.name)
         }
+        .onChange(of: isSessionActive) { old, new in
+            if old && !new {
+                reloadSavedIndices()
+                sessionRecords = SessionHistory.records(for: deck.name)
+            }
+        }
+        .fullScreenCover(isPresented: $isSessionActive) {
+            if let config = activeStudyConfig {
+                StudySessionView(deck: deck, specificCards: config.cards, reverseMode: config.reverseMode, typingMode: config.typingMode, shuffleMode: config.shuffleMode, isPresented: $isSessionActive)
+            }
+        }
+        .sheet(isPresented: $showingWordCountPicker) {
+            wordCountPickerSheet
+                .presentationDetents([.medium])
+        }
+    }
+
+    private var wordCountPickerSheet: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach([100, 250, 500, 1000], id: \.self) { count in
+                        if count <= deck.cards.count {
+                            Button {
+                                launchSessionWithCount(count)
+                            } label: {
+                                HStack {
+                                    Text("\(count) words")
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                }
+                            }
+                        }
+                    }
+                    if deck.cards.count > 1000 {
+                        Button {
+                            launchSessionWithCount(deck.cards.count)
+                        } label: {
+                            HStack {
+                                Text("All \(deck.cards.count) words")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                            }
+                        }
+                    }
+                } header: {
+                    Text("How many words?")
+                }
+                Section {
+                    HStack {
+                        TextField("Enter a number", text: $customWordCount)
+                            .keyboardType(.numberPad)
+                        Button("Go") {
+                            if let count = Int(customWordCount), count > 0 {
+                                launchSessionWithCount(min(count, deck.cards.count))
+                            }
+                        }
+                        .foregroundStyle(.indigo)
+                        .disabled(Int(customWordCount) == nil || Int(customWordCount)! < 1)
+                    }
+                } header: {
+                    Text("Custom")
+                }
+            }
+            .navigationTitle("Session Size")
+            .navigationBarTitleDisplayMode(.inline)
+            .tint(.indigo)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showingWordCountPicker = false }
+                }
+            }
+        }
+    }
+
+    private func launchSessionWithCount(_ count: Int) {
+        showingWordCountPicker = false
+        let cards: [Flashcard]?
+        if count >= deck.cards.count {
+            cards = studyCards
+        } else {
+            cards = Array(deck.cards.prefix(count))
+        }
+        activeStudyConfig = StudyConfig(cards: cards, reverseMode: reverseMode, typingMode: pendingTypingMode, shuffleMode: shuffleMode)
+        isSessionActive = true
     }
 
     // MARK: Study Section
 
     private var studyCards: [Flashcard]? {
-        guard wordRangeStored > 0, wordRangeStored < deck.cards.count else { return nil }
-        return Array(deck.cards).filter { $0.rank <= wordRangeStored }
+        nil
     }
 
     private var savedFlashcardIndex: Int? {
-        StudySession.savedIndex(for: deck.name, typingMode: false)
+        let _ = refreshID
+        return StudySession.savedIndex(for: deck.name, typingMode: false)
+    }
+    private var savedTypingIndex: Int? {
+        let _ = refreshID
+        return StudySession.savedIndex(for: deck.name, typingMode: true)
     }
 
-    private var savedTypingIndex: Int? {
-        StudySession.savedIndex(for: deck.name, typingMode: true)
+    private func reloadSavedIndices() {
+        refreshID = UUID()
     }
 
     private var studySection: some View {
         Section {
             // Flashcards
             Button {
-                activeStudyConfig = StudyConfig(cards: studyCards, reverseMode: reverseMode, typingMode: false, shuffleMode: shuffleMode)
+                if savedFlashcardIndex != nil {
+                    let savedCount = StudySession.savedCardCount(for: deck.name, typingMode: false)
+                    let cards: [Flashcard]? = savedCount.map { Array(deck.cards.prefix($0)) }
+                    activeStudyConfig = StudyConfig(cards: cards, reverseMode: reverseMode, typingMode: false, shuffleMode: shuffleMode)
+                    isSessionActive = true
+                } else {
+                    pendingTypingMode = false
+                    customWordCount = ""
+                    showingWordCountPicker = true
+                }
             } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "rectangle.portrait.on.rectangle.portrait.fill")
@@ -264,7 +379,8 @@ struct DeckDetailView: View {
                             .font(.headline)
                             .foregroundStyle(.primary)
                         if let idx = savedFlashcardIndex {
-                            Text("Card \(idx + 1) of \(deck.cards.count)")
+                            let total = StudySession.savedCardCount(for: deck.name, typingMode: false) ?? deck.cards.count
+                            Text("Card \(idx + 1) of \(total)")
                                 .font(.caption)
                                 .foregroundStyle(.indigo)
                         } else {
@@ -274,25 +390,33 @@ struct DeckDetailView: View {
                         }
                     }
                     Spacer()
-                    Image(systemName: "play.fill")
+                    if deck.flashcardStudied > 0 || savedFlashcardIndex != nil {
+                        Button { showResetFlashcardConfirm = true } label: {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.subheadline)
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Image(systemName: savedFlashcardIndex != nil ? "arrow.uturn.right" : "play.fill")
                         .foregroundStyle(.indigo)
                 }
                 .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
-            .contextMenu {
-                if savedFlashcardIndex != nil {
-                    Button {
-                        StudySession.clearSavedSession(for: deck.name, typingMode: false)
-                    } label: {
-                        Label("Reset Progress", systemImage: "arrow.counterclockwise")
-                    }
-                }
-            }
 
             // Type Answer
             Button {
-                activeStudyConfig = StudyConfig(cards: studyCards, reverseMode: reverseMode, typingMode: true, shuffleMode: shuffleMode)
+                if savedTypingIndex != nil {
+                    let savedCount = StudySession.savedCardCount(for: deck.name, typingMode: true)
+                    let cards: [Flashcard]? = savedCount.map { Array(deck.cards.prefix($0)) }
+                    activeStudyConfig = StudyConfig(cards: cards, reverseMode: reverseMode, typingMode: true, shuffleMode: shuffleMode)
+                    isSessionActive = true
+                } else {
+                    pendingTypingMode = true
+                    customWordCount = ""
+                    showingWordCountPicker = true
+                }
             } label: {
                 HStack(spacing: 14) {
                     Image(systemName: "keyboard.fill")
@@ -305,7 +429,8 @@ struct DeckDetailView: View {
                             .font(.headline)
                             .foregroundStyle(.primary)
                         if let idx = savedTypingIndex {
-                            Text("Card \(idx + 1) of \(deck.cards.count)")
+                            let total = StudySession.savedCardCount(for: deck.name, typingMode: true) ?? deck.cards.count
+                            Text("Card \(idx + 1) of \(total)")
                                 .font(.caption)
                                 .foregroundStyle(.blue)
                         } else {
@@ -315,21 +440,20 @@ struct DeckDetailView: View {
                         }
                     }
                     Spacer()
-                    Image(systemName: "play.fill")
+                    if deck.typingStudied > 0 || savedTypingIndex != nil {
+                        Button { showResetTypingConfirm = true } label: {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.subheadline)
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Image(systemName: savedTypingIndex != nil ? "arrow.uturn.right" : "play.fill")
                         .foregroundStyle(.blue)
                 }
                 .padding(.vertical, 4)
             }
             .buttonStyle(.plain)
-            .contextMenu {
-                if savedTypingIndex != nil {
-                    Button {
-                        StudySession.clearSavedSession(for: deck.name, typingMode: true)
-                    } label: {
-                        Label("Reset Progress", systemImage: "arrow.counterclockwise")
-                    }
-                }
-            }
 
             // Study Options
             Button { showingStudyPicker = true } label: {
@@ -342,7 +466,7 @@ struct DeckDetailView: View {
                         Text("Study Options")
                             .font(.subheadline)
                             .foregroundStyle(.primary)
-                        Text("Word range · reverse · shuffle")
+                        Text("Reverse · shuffle")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -353,9 +477,6 @@ struct DeckDetailView: View {
                 }
             }
             .buttonStyle(.plain)
-        } header: {
-            Text("\(deck.cards.count) words · \(deck.masteredCards.count) correct · \(deck.strugglingCards.count) incorrect")
-                .font(.caption)
         }
     }
 
@@ -363,26 +484,32 @@ struct DeckDetailView: View {
 
     @State private var showResetFlashcardConfirm = false
     @State private var showResetTypingConfirm = false
+    @State private var flashcardProgressExpanded = true
+    @State private var typingProgressExpanded = true
 
     private var flashcardProgressSection: some View {
         Section {
-            HStack {
-                Text("Flashcards")
-                    .font(.subheadline.weight(.medium))
-                Spacer()
-                if deck.flashcardStudied > 0 {
-                    Button { showResetFlashcardConfirm = true } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
-                    .buttonStyle(.plain)
+            Button {
+                withAnimation { flashcardProgressExpanded.toggle() }
+            } label: {
+                HStack {
+                    Text("Flashcards")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(flashcardProgressExpanded ? 90 : 0))
                 }
             }
-            HStack(spacing: 16) {
-                progressStat(count: deck.flashcardCorrect, label: "Know", color: .green)
-                progressStat(count: deck.flashcardIncorrect, label: "Don't Know", color: .red)
-                progressStat(count: deck.cards.count - deck.flashcardStudied, label: "New", color: .secondary)
+            .buttonStyle(.plain)
+            if flashcardProgressExpanded {
+                HStack(spacing: 16) {
+                    progressStat(count: deck.flashcardCorrect, label: "Mastered", color: .green)
+                    progressStat(count: deck.flashcardIncorrect, label: "Weak", color: .red)
+                    progressStat(count: deck.cards.count - deck.flashcardStudied, label: "New", color: .secondary)
+                }
             }
         }
         .alert("Reset Flashcard Progress?", isPresented: $showResetFlashcardConfirm) {
@@ -395,23 +522,27 @@ struct DeckDetailView: View {
 
     private var typingProgressSection: some View {
         Section {
-            HStack {
-                Text("Typing")
-                    .font(.subheadline.weight(.medium))
-                Spacer()
-                if deck.typingStudied > 0 {
-                    Button { showResetTypingConfirm = true } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
-                    .buttonStyle(.plain)
+            Button {
+                withAnimation { typingProgressExpanded.toggle() }
+            } label: {
+                HStack {
+                    Text("Typing")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(typingProgressExpanded ? 90 : 0))
                 }
             }
-            HStack(spacing: 16) {
-                progressStat(count: deck.typingCorrect, label: "Correct", color: .green)
-                progressStat(count: deck.typingIncorrect, label: "Incorrect", color: .red)
-                progressStat(count: deck.cards.count - deck.typingStudied, label: "New", color: .secondary)
+            .buttonStyle(.plain)
+            if typingProgressExpanded {
+                HStack(spacing: 16) {
+                    progressStat(count: deck.typingCorrect, label: "Correct", color: .green)
+                    progressStat(count: deck.typingIncorrect, label: "Incorrect", color: .red)
+                    progressStat(count: deck.cards.count - deck.typingStudied, label: "New", color: .secondary)
+                }
             }
         }
         .alert("Reset Typing Progress?", isPresented: $showResetTypingConfirm) {
@@ -432,6 +563,124 @@ struct DeckDetailView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: Session History
+
+    @State private var showAllHistory = false
+    @State private var showClearHistoryConfirm = false
+    @State private var recordToDelete: SessionRecord?
+
+    private var lastSessionSection: some View {
+        let visibleRecords = showAllHistory ? sessionRecords : Array(sessionRecords.prefix(3))
+
+        return Section {
+            if sessionRecords.isEmpty {
+                Text("Complete a session to see results here")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+            } else {
+                ForEach(visibleRecords) { record in
+                    NavigationLink {
+                        SessionDetailView(record: record, languageCode: deck.languageCode)
+                    } label: {
+                        sessionHistoryRow(record: record)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                recordToDelete = record
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .tint(.red)
+                        }
+                }
+                if sessionRecords.count > 3 {
+                    Button {
+                        withAnimation { showAllHistory.toggle() }
+                    } label: {
+                        Text(showAllHistory ? "Show Less" : "Show All (\(sessionRecords.count))")
+                            .font(.caption)
+                            .foregroundStyle(.indigo)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Button(role: .destructive) {
+                    showClearHistoryConfirm = true
+                } label: {
+                    Text("Clear All History")
+                        .font(.caption)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+            }
+        } header: {
+            Text("Session History")
+        }
+        .alert("Delete Session?", isPresented: Binding(
+            get: { recordToDelete != nil },
+            set: { if !$0 { recordToDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let record = recordToDelete {
+                    deleteSessionRecord(record)
+                }
+                recordToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { recordToDelete = nil }
+        } message: {
+            Text("Remove this session record?")
+        }
+        .alert("Clear Session History?", isPresented: $showClearHistoryConfirm) {
+            Button("Clear All", role: .destructive) {
+                SessionHistory.clear(for: deck.name)
+                sessionRecords = []
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Delete all session history for \(deck.name)?")
+        }
+    }
+
+    private func deleteSessionRecord(_ record: SessionRecord) {
+        SessionHistory.delete(id: record.id)
+        withAnimation {
+            sessionRecords.removeAll { $0.id == record.id }
+        }
+    }
+
+    private func sessionHistoryRow(record: SessionRecord) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: record.typingMode ? "keyboard" : "rectangle.portrait.on.rectangle.portrait")
+                .font(.caption)
+                .foregroundStyle(record.typingMode ? .blue : .indigo)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text("\(record.correct)/\(record.total)")
+                        .font(.subheadline.bold().monospacedDigit())
+                    Text("\(record.percentage)%")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(record.percentage >= 80 ? .green : record.percentage >= 50 ? .orange : .red)
+                }
+                Text(record.date.formatted(.dateTime.month(.abbreviated).day().year().hour().minute()))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            Spacer()
+            Text(record.modeLabel)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill((record.typingMode ? Color.blue : Color.indigo).opacity(0.1))
+                )
+        }
     }
 
     // MARK: Filter + Cards Section
@@ -468,23 +717,55 @@ struct DeckDetailView: View {
         }
     }
 
+    private func archiveProgress(typingMode: Bool) {
+        let correctCards: [Flashcard]
+        let incorrectCards: [Flashcard]
+        if typingMode {
+            correctCards = deck.cards.filter { $0.typingCorrectCount > 0 }
+            incorrectCards = deck.cards.filter { $0.typingIncorrectCount > 0 }
+        } else {
+            correctCards = deck.cards.filter { $0.correctCount > 0 }
+            incorrectCards = deck.cards.filter { $0.incorrectCount > 0 }
+        }
+        let correct = correctCards.count
+        let incorrect = incorrectCards.count
+        let total = correct + incorrect
+        guard total > 0 else { return }
+        SessionHistory.save(
+            deckName: deck.name,
+            typingMode: typingMode,
+            correct: correct,
+            incorrect: incorrect,
+            total: total,
+            correctWords: correctCards.map { WordResult(front: $0.front, back: $0.back) },
+            incorrectWords: incorrectCards.map { WordResult(front: $0.front, back: $0.back) }
+        )
+        sessionRecords = SessionHistory.records(for: deck.name)
+    }
+
     private func resetFlashcardProgress() {
+        archiveProgress(typingMode: false)
         for card in deck.cards {
             card.correctCount = 0
             card.incorrectCount = 0
         }
         StudySession.clearSavedSession(for: deck.name, typingMode: false)
+        reloadSavedIndices()
     }
 
     private func resetTypingProgress() {
+        archiveProgress(typingMode: true)
         for card in deck.cards {
             card.typingCorrectCount = 0
             card.typingIncorrectCount = 0
         }
         StudySession.clearSavedSession(for: deck.name, typingMode: true)
+        reloadSavedIndices()
     }
 
     private func resetAllProgress() {
+        archiveProgress(typingMode: false)
+        archiveProgress(typingMode: true)
         for card in deck.cards {
             card.correctCount = 0
             card.incorrectCount = 0
@@ -494,6 +775,7 @@ struct DeckDetailView: View {
         }
         StudySession.clearSavedSession(for: deck.name, typingMode: false)
         StudySession.clearSavedSession(for: deck.name, typingMode: true)
+        reloadSavedIndices()
     }
 
     private var filteredCards: [Flashcard] {
@@ -535,71 +817,71 @@ struct DeckDetailView: View {
 
 // MARK: - Study Mode Picker
 
-enum CardSet: String, CaseIterable {
+enum FlashcardCardSet: String, CaseIterable {
     case all = "All"
-    case incorrect = "Don't Know"
-    case correct = "Know"
-    case skipped = "New"
+    case mastered = "Mastered"
+    case weak = "Weak"
+    case unseen = "New"
+}
+
+enum TypingCardSet: String, CaseIterable {
+    case all = "All"
+    case correct = "Correct"
+    case incorrect = "Incorrect"
+    case unseen = "New"
 }
 
 struct StudyModePicker: View {
     let deck: Deck
     let onSelect: ([Flashcard]?, Bool, Bool, Bool) -> Void
-    @AppStorage("studyWordRange") private var wordRangeStored: Int = 0
     @AppStorage("studyReverse") private var reverseMode = false
     @AppStorage("studyTyping") private var typingMode = false
     @AppStorage("studyShuffle") private var shuffleMode = true
-    @State private var wordRangeValue: Double = 0
-    @State private var selectedSet: CardSet = .all
+    @State private var selectedFlashcardSet: FlashcardCardSet = .all
+    @State private var selectedTypingSet: TypingCardSet = .all
     @State private var showingNextSessionAlert = false
-
-    private var maxCards: Int { deck.cards.count }
-
-    private var wordRange: Int {
-        let v = Int(wordRangeValue)
-        return v == 0 ? maxCards : v
-    }
 
     private var hasActiveSession: Bool {
         StudySession.savedIndex(for: deck.name, typingMode: false) != nil ||
         StudySession.savedIndex(for: deck.name, typingMode: true) != nil
     }
 
-    private var rangedCards: [Flashcard] {
-        Array(deck.cards).filter { $0.rank <= wordRange }
-    }
-
     private var selectedCards: [Flashcard] {
-        switch selectedSet {
-        case .all: return rangedCards
-        case .incorrect: return rangedCards.filter { $0.masteryStatus == .struggling }
-        case .correct: return rangedCards.filter { $0.masteryStatus == .mastered }
-        case .skipped: return rangedCards.filter { $0.masteryStatus == .unseen }
+        var cards = Array(deck.cards)
+
+        switch selectedFlashcardSet {
+        case .all: break
+        case .mastered: cards = cards.filter { $0.totalReviews > 0 && $0.accuracy >= 0.8 }
+        case .weak: cards = cards.filter { $0.totalReviews > 0 && $0.accuracy < 0.8 }
+        case .unseen: cards = cards.filter { $0.totalReviews == 0 }
         }
+
+        switch selectedTypingSet {
+        case .all: break
+        case .correct: cards = cards.filter { $0.typingTotalReviews > 0 && $0.typingAccuracy >= 0.8 }
+        case .incorrect: cards = cards.filter { $0.typingTotalReviews > 0 && $0.typingAccuracy < 0.8 }
+        case .unseen: cards = cards.filter { $0.typingTotalReviews == 0 }
+        }
+
+        return cards
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 List {
-                    Section {
-                        VStack(spacing: 4) {
-                            HStack {
-                                Text("Word Range")
-                                    .font(.subheadline)
-                                Spacer()
-                                Text(Int(wordRangeValue) == 0 ? "All \(maxCards)" : "Top \(Int(wordRangeValue))")
-                                    .font(.subheadline.monospacedDigit())
-                                    .foregroundStyle(.indigo)
+                    Section("Flashcards") {
+                        Picker("Flashcards", selection: $selectedFlashcardSet) {
+                            ForEach(FlashcardCardSet.allCases, id: \.self) { set in
+                                Text(set.rawValue).tag(set)
                             }
-                            Slider(value: $wordRangeValue, in: 0...Double(maxCards), step: 5)
-                                .tint(.indigo)
                         }
+                        .pickerStyle(.segmented)
                     }
 
-                    Section("Cards") {
-                        Picker("Study", selection: $selectedSet) {
-                            ForEach(CardSet.allCases, id: \.self) { set in
+                    Section("Typing") {
+                        Picker("Typing", selection: $selectedTypingSet) {
+                            ForEach(TypingCardSet.allCases, id: \.self) { set in
                                 Text(set.rawValue).tag(set)
                             }
                         }
@@ -615,31 +897,30 @@ struct StudyModePicker: View {
                         Toggle("Reverse (English → Word)", isOn: $reverseMode)
                             .font(.subheadline)
                     }
+
+                    Section {
+                        Button {
+                            if hasActiveSession {
+                                showingNextSessionAlert = true
+                            } else {
+                                onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
+                            }
+                        } label: {
+                            Text("Save & Apply")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(.indigo)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                    }
                 }
                 .listStyle(.insetGrouped)
-
-                // Save button pinned at bottom
-                Button {
-                    if hasActiveSession {
-                        showingNextSessionAlert = true
-                    } else {
-                        onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
-                    }
-                } label: {
-                    Text("Save & Apply")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(.indigo)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
             }
             .navigationTitle("Study Mode")
-            .onAppear { wordRangeValue = Double(wordRangeStored) }
-            .onChange(of: wordRangeValue) { wordRangeStored = Int(wordRangeValue) }
             .alert("Changes will apply to your next session", isPresented: $showingNextSessionAlert) {
                 Button("Save Anyway") {
                     onSelect(selectedCards.isEmpty ? nil : selectedCards, reverseMode, typingMode, shuffleMode)
@@ -708,6 +989,89 @@ struct CardRowView: View {
             .buttonStyle(.plain)
         }
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Session Detail View
+
+struct SessionDetailView: View {
+    let record: SessionRecord
+    let languageCode: String
+
+    var body: some View {
+        List {
+            Section {
+                ResultRow(label: "Mode", value: record.modeLabel, color: record.typingMode ? .blue : .indigo)
+                ResultRow(label: "Total", value: "\(record.total) words", color: .primary)
+                ResultRow(label: record.typingMode ? "Correct" : "Mastered", value: "\(record.correct)", color: .green)
+                ResultRow(label: record.typingMode ? "Incorrect" : "Weak", value: "\(record.incorrect)", color: .red)
+                ResultRow(label: "Accuracy", value: "\(record.percentage)%", color: record.percentage >= 80 ? .green : record.percentage >= 50 ? .orange : .red)
+            }
+
+            if let words = record.incorrectWords, !words.isEmpty {
+                Section {
+                    ForEach(Array(words.enumerated()), id: \.offset) { _, word in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(word.front)
+                                    .font(.body.bold())
+                                Text(word.back)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button {
+                                SpeechHelper.shared.speak(word.front, languageCode: languageCode)
+                            } label: {
+                                Image(systemName: "speaker.wave.2.fill")
+                                    .foregroundStyle(.tint)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                } header: {
+                    Label("\(record.typingMode ? "Incorrect" : "Weak") (\(words.count))", systemImage: "xmark.circle.fill")
+                        .foregroundStyle(.red)
+                }
+            }
+
+            if let words = record.correctWords, !words.isEmpty {
+                Section {
+                    ForEach(Array(words.enumerated()), id: \.offset) { _, word in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(word.front)
+                                    .font(.body.bold())
+                                Text(word.back)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button {
+                                SpeechHelper.shared.speak(word.front, languageCode: languageCode)
+                            } label: {
+                                Image(systemName: "speaker.wave.2.fill")
+                                    .foregroundStyle(.tint)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                } header: {
+                    Label("\(record.typingMode ? "Correct" : "Mastered") (\(words.count))", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+            }
+
+            if record.correctWords == nil && record.incorrectWords == nil {
+                Section {
+                    Text("Word details not available for this session")
+                        .font(.subheadline)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .navigationTitle(record.date.formatted(.dateTime.month(.abbreviated).day().year()))
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

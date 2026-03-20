@@ -37,6 +37,9 @@
 		E10000010000000000000028 /* TurkishWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000028 /* TurkishWords.swift */; };
 		E10000010000000000000029 /* PolishWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000029 /* PolishWords.swift */; };
 		E10000010000000000000030 /* ArabicWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000030 /* ArabicWords.swift */; };
+		E10000010000000000000031 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000031 /* PrivacyInfo.xcprivacy */; };
+		E10000010000000000000032 /* SchemaVersioning.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000032 /* SchemaVersioning.swift */; };
+		E10000010000000000000033 /* SessionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10000020000000000000033 /* SessionHistory.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -71,6 +74,9 @@
 		E10000020000000000000029 /* PolishWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolishWords.swift; sourceTree = "<group>"; };
 		E10000020000000000000030 /* ArabicWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArabicWords.swift; sourceTree = "<group>"; };
 		E10000030000000000000001 /* TangoKado.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TangoKado.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E10000020000000000000031 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		E10000020000000000000032 /* SchemaVersioning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaVersioning.swift; sourceTree = "<group>"; };
+		E10000020000000000000033 /* SessionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionHistory.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,7 +84,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
+							E10000010000000000000031 /* PrivacyInfo.xcprivacy in Resources */,
+);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -96,6 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				E10000020000000000000001 /* TangoKadoApp.swift */,
+				E10000020000000000000031 /* PrivacyInfo.xcprivacy */,
 				E10000020000000000000002 /* ContentView.swift */,
 				E10000020000000000000018 /* SpeechHelper.swift */,
 				E10000050000000000000003 /* Models */,
@@ -112,6 +120,8 @@
 			children = (
 				E10000020000000000000005 /* Flashcard.swift */,
 				E10000020000000000000006 /* Deck.swift */,
+				E10000020000000000000032 /* SchemaVersioning.swift */,
+				E10000020000000000000033 /* SessionHistory.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -268,6 +278,8 @@
 				E10000010000000000000028 /* TurkishWords.swift in Sources */,
 				E10000010000000000000029 /* PolishWords.swift in Sources */,
 				E10000010000000000000030 /* ArabicWords.swift in Sources */,
+				E10000010000000000000032 /* SchemaVersioning.swift in Sources */,
+				E10000010000000000000033 /* SessionHistory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
