@@ -18,6 +18,7 @@ struct AddLanguageView: View {
                         let alreadyAdded = addedLanguageCodes.contains(language.code)
                         Button {
                             if !alreadyAdded {
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                 addLanguage(language)
                             }
                         } label: {
@@ -76,3 +77,4 @@ struct AddLanguageView: View {
         modelContext.insert(deck)
     }
 }
+
