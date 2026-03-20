@@ -9,6 +9,7 @@ struct DeckListView: View {
     @AppStorage("appColorScheme") private var appColorScheme = 0
     @State private var showingAddLanguage = false
     @State private var deckToDelete: Deck?
+    @State private var showingResetAllData = false
 
     var body: some View {
         NavigationStack {
@@ -30,6 +31,18 @@ struct DeckListView: View {
                                 .tint(.red)
                             }
                             .listRowSeparator(.hidden)
+                        }
+                        Section {
+                            Button(role: .destructive) {
+                                showingResetAllData = true
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    Text("Reset All Data")
+                                        .font(.subheadline)
+                                    Spacer()
+                                }
+                            }
                         }
                     }
                 }
@@ -66,6 +79,20 @@ struct DeckListView: View {
                 Button("Cancel", role: .cancel) { deckToDelete = nil }
             } message: {
                 Text("Delete all cards and progress for \(deckToDelete?.name ?? "")?")
+            }
+            .alert("Reset All Data?", isPresented: $showingResetAllData) {
+                Button("Reset Everything", role: .destructive) {
+                    for deck in decks {
+                        modelContext.delete(deck)
+                    }
+                    SessionHistory.clearAll()
+                    UserDefaults.standard.set(0, forKey: "currentStreak")
+                    UserDefaults.standard.removeObject(forKey: "streakDate")
+                    UserDefaults.standard.removeObject(forKey: "lastStudyDate")
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete all languages, cards, progress, and session history. This cannot be undone.")
             }
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageView()
