@@ -2,7 +2,8 @@ import SwiftUI
 import SwiftData
 
 @main
-struct TangoKadoApp: App {
+struct
+: App {
     let container: ModelContainer
 
     init() {

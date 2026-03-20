@@ -18,7 +18,7 @@ struct WelcomeView: View {
                 welcomePage(
                     icon: "rectangle.portrait.on.rectangle.portrait.fill",
                     title: "Study Smart",
-                    subtitle: "Tap to flip cards\nSwipe to navigate\nMark what you know",
+                    subtitle: "Tap to flip cards\nSwipe to navigate\nTrack your mastery",
                     color: .blue
                 )
                 .tag(1)
