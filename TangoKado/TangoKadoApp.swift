@@ -6,11 +6,15 @@ struct TangoKadoApp: App {
     let container: ModelContainer
 
     init() {
-        let schema = Schema([Deck.self, Flashcard.self])
+        let schema = Schema(versionedSchema: TangoKadoSchemaV1.self)
         let config = ModelConfiguration(schema: schema)
 
         do {
-            container = try ModelContainer(for: schema, configurations: [config])
+            container = try ModelContainer(
+                for: schema,
+                migrationPlan: TangoKadoMigrationPlan.self,
+                configurations: [config]
+            )
         } catch {
             let url = config.url
             try? FileManager.default.removeItem(at: url)
@@ -18,7 +22,11 @@ struct TangoKadoApp: App {
             try? FileManager.default.removeItem(at: url.deletingPathExtension().appendingPathExtension("store-wal"))
 
             do {
-                container = try ModelContainer(for: schema, configurations: [config])
+                container = try ModelContainer(
+                    for: schema,
+                    migrationPlan: TangoKadoMigrationPlan.self,
+                    configurations: [config]
+                )
             } catch {
                 fatalError("Failed to create ModelContainer after reset: \(error)")
             }

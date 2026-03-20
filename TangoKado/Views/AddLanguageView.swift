@@ -29,9 +29,6 @@ struct AddLanguageView: View {
                                     Text(language.name)
                                         .font(.headline)
                                         .foregroundStyle(.primary)
-                                    Text("\(language.words.count) words")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
                                 }
 
                                 Spacer()
@@ -65,6 +62,7 @@ struct AddLanguageView: View {
     }
 
     private func addLanguage(_ language: LanguageInfo) {
+        guard !existingDecks.contains(where: { $0.languageCode == language.code }) else { return }
         let deck = Deck(
             name: language.name,
             description: "Top \(language.words.count) most used \(language.name) words",
