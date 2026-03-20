@@ -9,7 +9,6 @@ struct DeckListView: View {
     @AppStorage("appColorScheme") private var appColorScheme = 0
     @State private var showingAddLanguage = false
     @State private var deckToDelete: Deck?
-    @State private var showingResetAllData = false
 
     var body: some View {
         NavigationStack {
@@ -31,18 +30,6 @@ struct DeckListView: View {
                                 .tint(.red)
                             }
                             .listRowSeparator(.hidden)
-                        }
-                        Section {
-                            Button(role: .destructive) {
-                                showingResetAllData = true
-                            } label: {
-                                HStack {
-                                    Spacer()
-                                    Text("Reset All Data")
-                                        .font(.subheadline)
-                                    Spacer()
-                                }
-                            }
                         }
                     }
                 }
@@ -72,6 +59,11 @@ struct DeckListView: View {
             )) {
                 Button("Remove", role: .destructive) {
                     if let deck = deckToDelete {
+                        SessionHistory.clear(for: deck.name)
+                        StudySession.clearSavedSession(for: deck.name, typingMode: false)
+                        StudySession.clearSavedSession(for: deck.name, typingMode: true)
+                        UserDefaults.standard.removeObject(forKey: "lastSession_\(deck.name)_flash")
+                        UserDefaults.standard.removeObject(forKey: "lastSession_\(deck.name)_type")
                         withAnimation { modelContext.delete(deck) }
                     }
                     deckToDelete = nil
@@ -79,20 +71,6 @@ struct DeckListView: View {
                 Button("Cancel", role: .cancel) { deckToDelete = nil }
             } message: {
                 Text("Delete all cards and progress for \(deckToDelete?.name ?? "")?")
-            }
-            .alert("Reset All Data?", isPresented: $showingResetAllData) {
-                Button("Reset Everything", role: .destructive) {
-                    for deck in decks {
-                        modelContext.delete(deck)
-                    }
-                    SessionHistory.clearAll()
-                    UserDefaults.standard.set(0, forKey: "currentStreak")
-                    UserDefaults.standard.removeObject(forKey: "streakDate")
-                    UserDefaults.standard.removeObject(forKey: "lastStudyDate")
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will permanently delete all languages, cards, progress, and session history. This cannot be undone.")
             }
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageView()
@@ -353,9 +331,10 @@ struct DeckDetailView: View {
         showingWordCountPicker = false
         let cards: [Flashcard]?
         if count >= deck.cards.count {
-            cards = studyCards
+            cards = nil
         } else {
-            cards = Array(deck.cards.prefix(count))
+            let sorted = Array(deck.cards).sorted { $0.rank < $1.rank }
+            cards = Array(sorted.prefix(count))
         }
         activeStudyConfig = StudyConfig(cards: cards, reverseMode: reverseMode, typingMode: pendingTypingMode, shuffleMode: shuffleMode)
         isSessionActive = true
@@ -411,7 +390,7 @@ struct DeckDetailView: View {
                                 .font(.caption)
                                 .foregroundStyle(.indigo)
                         } else {
-                            Text("Tap to flip · swipe to skip")
+                            Text("Tap to flip · Swipe to skip")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -429,6 +408,7 @@ struct DeckDetailView: View {
                         .foregroundStyle(.indigo)
                 }
                 .padding(.vertical, 4)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -479,6 +459,7 @@ struct DeckDetailView: View {
                         .foregroundStyle(.blue)
                 }
                 .padding(.vertical, 4)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -493,7 +474,7 @@ struct DeckDetailView: View {
                         Text("Study Options")
                             .font(.subheadline)
                             .foregroundStyle(.primary)
-                        Text("Reverse · shuffle")
+                        Text("Reverse · Shuffle")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -502,6 +483,7 @@ struct DeckDetailView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
