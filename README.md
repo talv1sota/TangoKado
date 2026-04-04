@@ -15,6 +15,16 @@ A flashcard app for learning the most common words in any language.
 - **Dark mode** — full light and dark theme support
 - **Custom decks** — create your own flashcard decks
 
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/talv1sota/TangoKado.git
+   ```
+2. Open `TangoKado.xcodeproj` in Xcode
+3. Select your target device or simulator
+4. Build and run (⌘R)
+
 ## Requirements
 
 - iOS 17.0+
@@ -32,4 +42,4 @@ TangoKado collects no user data. All progress is stored locally on device. No an
 
 ## License
 
-Copyright 2026 C2 Base LLC. All rights reserved.
+Copyright 2026. All rights reserved.
